@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Infectious Life 150</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="topbarInner">
+    <h1 class="title">Infectious Life 150</h1>
+    <div class="sub">STOPマスは通過しても停止 / 149は全員集合でTG判定</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- LEFT: Board -->
+  <section class="card">
+    <div class="hd">Board</div>
+    <div class="bd">
+
+      <div class="row rowSpace">
+        <div class="row">
+          <button id="btnStart" class="btn btnPrimary">ゲーム開始</button>
+          <button id="btnRoll" class="btn btnGhost" disabled>サイコロ</button>
+          <button id="btnReset" class="btn btnDanger">リセット</button>
+        </div>
+
+        <div class="row">
+          <span class="pill" id="playerCountPill">Players: 4</span>
+
+          <label class="pill pillSelect">
+            人数
+            <select id="playerCount" aria-label="player count">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4" selected>4</option>
+              <option value="5">5</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="row rowSpace mt10">
+        <div class="diceBox">
+          <div class="diceImg" id="diceImg" aria-label="dice"></div>
+
+          <div class="row pillsWrap">
+            <span class="pill" id="turnPill">Turn: -</span>
+            <span class="pill" id="envPill">Env: -</span>
+            <span class="pill">政府基金: <b id="govFund">0</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bigMsg mt10" id="msgBox">「ゲーム開始」でスタート</div>
+
+      <div class="boardBox mt12" id="boardBox">
+        <img id="boardImg" alt="board" />
+        <div class="gridLayer" id="gridLayer" aria-hidden="true"></div>
+        <div class="tokensLayer" id="tokensLayer" aria-hidden="true"></div>
+
+        <div class="deadRack" id="deadRack">
+          <span class="label">DEAD</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- RIGHT: Status / Log -->
+  <section class="card">
+    <div class="hd">Status / Log</div>
+    <div class="bd">
+
+      <div class="muted">
+        ※貢献度（CP）は全員に公開（初期0 / 上限なし）<br/>
+        ※149判定はTG閾値で確定（確率なし）
+      </div>
+
+      <!-- ✅ JSの renderTable() が出す 8列 に合わせる -->
+      <div class="tableWrap mt10">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Pos</th>
+              <th>Money</th>
+              <th>保険</th>
+              <th>未治療</th>
+              <th>アイテム</th>
+              <th>環境</th>
+              <th>貢献度(CP)</th>
+            </tr>
+          </thead>
+          <tbody id="playerTbody"></tbody>
+        </table>
+      </div>
+
+      <div class="hd hdSub mt12">LOG</div>
+      <pre class="log" id="log"></pre>
+
+      <div class="resultWrap mt12" id="resultWrap" style="display:none;">
+        <div class="hd">Result</div>
+        <div class="bd">
+          <div class="podiumBox">
+            <img class="podiumImg" src="./podium.png" alt="podium"/>
+            <div class="podName pod1" id="pod1">-</div>
+            <div class="podName pod2" id="pod2">-</div>
+            <div class="podName pod3" id="pod3">-</div>
+          </div>
+
+          <div class="deadList" id="deadList"></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<!-- Modal -->
+<div class="modalBack" id="modalBack" role="dialog" aria-modal="true" style="display:none;">
+  <div class="modal" role="document">
+    <div class="mh" id="modalTitle"></div>
+    <div class="mb" id="modalBody"></div>
+    <div class="mf" id="modalFoot"></div>
+  </div>
+</div>
+
+<script src="./main.js"></script>
+</body>
+</html>
