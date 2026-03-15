@@ -3,7 +3,7 @@
    (BALANCE PATCH v2 + GHOST PATCH + RESULT/LOG PATCH)
    + 115 CHOICE PATCH + MEDICAL COLLAPSE PATCH + TRIAGE PATCH + WAVE PATCH
 
-   ✅ 追加（RESULT/LOG PATCH）
+   ✅ RESULT/LOG PATCH
    - リザルトに以下を表示＆保存（localStorage）
      保険（初期→最終／変更履歴）
      最初のワクチン接種の有無
@@ -181,7 +181,6 @@
     },
 
     // ✅ 115 global event (one-time / per-player choice)
-    // ※数値は元コードのまま流用（増やさない）
     EVENT115: {
       ENABLE: true,
       GOVFUND_DELTA_PER_PLAYER: 15000,
@@ -198,35 +197,29 @@
     },
 
     // ✅ 感染波（Wave）
-    // しきい値は既存の「3」「1」を流用（新数値を増やさない）
     WAVE: {
       ENABLE: true,
       LV_MAX: 3,
       // ラウンド内「感染成立（ワクチン/アイテムで防げなかった）」回数で上下
-      UP_IF_INFECT_HITS_AT_LEAST: 3,  // =UNTREATED_DEATH_THRESHOLDと同じ
-      DOWN_IF_INFECT_HITS_AT_MOST: 1, // =SEV_MINと同じ
-      // 影響（既存数値で作る）
-      INFECT_PLUS_LV1: 1, // 既存の「+1」を流用
+      UP_IF_INFECT_HITS_AT_LEAST: 3,  // =UNTREATED_DEATH_THRESHOLD
+      DOWN_IF_INFECT_HITS_AT_MOST: 1, // =SEV_MIN
+      // 影響
+      INFECT_PLUS_LV1: 1,
       INFECT_PLUS_LV2: 1,
-      INFECT_PLUS_LV3: 2, // 既存の「2」はTRIAL.BASE_NEED等で出てくる
-      // WORK罰（既存値から流用）
-      WORK_MINUS_LV2: 2000, // eventマス生成に 2000 が出てくる
-      WORK_MINUS_LV3: 5000, // insurance B の治療費 5000 を流用
-      GOV_MINUS_LV3: 10000, // insurance A の治療費 10000 を流用
+      INFECT_PLUS_LV3: 2,
+      // WORK罰
+      WORK_MINUS_LV2: 2000,
+      WORK_MINUS_LV3: 5000,
+      GOV_MINUS_LV3: 10000,
     },
 
     // ✅ 医療崩壊（システムイベント：145とは別）
-    // 新しい数字は増やさず、既存パラメータから組む
     MEDICAL_COLLAPSE: {
       ENABLE: true,
-      // 発生条件：未治療合計 >= UNTREATED_DEATH_THRESHOLD(=3) になったら「ラウンド末に」判定
       TRIGGER_UNTREATED_TOTAL_AT_LEAST: 3,
-      // 発生確率：EBOLAと同じ確率を流用
       TRIGGER_PROB: 0.28,
-      // 継続：EBOLAと同じ 2〜4 を流用
       DURATION_MIN: 2,
       DURATION_MAX: 4,
-      // 影響：治療に「追加自己負担」(=保険Bの自己負担 5000 を流用)
       EXTRA_TREAT_PLAYER_PAY: 5000,
       LOG_TEXT: "【医療崩壊】病床・人員不足。治療コスト上昇＆トリアージが発生しうる。",
     },
@@ -234,13 +227,9 @@
     // ✅ トリアージ（医療崩壊中のみ）
     TRIAGE: {
       ENABLE: true,
-      // 発生条件：医療崩壊中 かつ 未治療合計>=3（同じく流用）
       UNTREATED_TOTAL_AT_LEAST: 3,
-      // 発生確率：EBOLAと同じ
       TRIGGER_PROB: 0.28,
-      // 政府の「無料治療」コスト：保険Bの政府負担 5000 を流用
       GOV_PAY: 5000,
-      // 選ばれなかった「未治療者」のCPペナ：REFUSE_TREAT_CP(-1)を流用
       CP_PENALTY_NOT_CHOSEN: -1,
       LOG_TEXT: "【トリアージ】政府は1人だけ治療を提供できる。投票で対象決定。",
     },
@@ -321,6 +310,7 @@
      UI: modal
   ========================= */
   function showModal(title, bodyHTML, buttons) {
+    if (!el.modalBack) return;
     el.modalTitle.textContent = title;
     el.modalBody.innerHTML = bodyHTML;
     el.modalFoot.innerHTML = "";
@@ -334,6 +324,7 @@
     el.modalBack.style.display = "flex";
   }
   function closeModal() {
+    if (!el.modalBack) return;
     el.modalBack.style.display = "none";
     el.modalTitle.textContent = "";
     el.modalBody.innerHTML = "";
@@ -356,6 +347,7 @@
      Dice image (3x2 sprite)
   ========================= */
   function setDiceFace(n) {
+    if (!el.diceImg) return;
     const idx = Math.max(1, Math.min(6, n)) - 1;
     const col = idx % 3;
     const row = Math.floor(idx / 3);
@@ -458,6 +450,7 @@
   }
 
   function buildGridOverlay() {
+    if (!el.gridLayer) return;
     el.gridLayer.innerHTML = "";
     const labelOf = (type) =>
       ({
@@ -496,6 +489,7 @@
     return { row, col };
   }
   function tileCenterPx(tile) {
+    if (!el.boardBox) return { x: 0, y: 0 };
     const w = el.boardBox.clientWidth;
     const h = el.boardBox.clientHeight;
     const { row, col } = tileToRowCol(tile);
@@ -609,6 +603,7 @@
      Render
   ========================= */
   function rebuildTokens() {
+    if (!el.tokensLayer) return;
     el.tokensLayer.innerHTML = "";
     for (const p of players) {
       const d = document.createElement("div");
@@ -618,6 +613,7 @@
     }
   }
   function updateDeadRack() {
+    if (!el.deadRack) return;
     el.deadRack.querySelectorAll(".deadToken").forEach((x) => x.remove());
     for (const p of players) {
       if (!p.alive) {
@@ -661,6 +657,7 @@
   }
 
   function renderTable() {
+    if (!el.playerTbody) return;
     el.playerTbody.innerHTML = "";
     for (const p of players) {
       const env = envOf(p.pos);
@@ -798,7 +795,7 @@
   }
 
   function govFundStageBonus(playersArr, world) {
-    const base = ebolaGovThreshold(playersArr.length); // 人数別基準
+    const base = ebolaGovThreshold(playersArr.length);
     const r = world.govFund / base;
 
     if (r < 0.60) return -2;
@@ -838,10 +835,7 @@
     if (!cond.any) return false;
 
     if (rand01() > CONFIG.EBOLA.TRIGGER_PROB) {
-      logLine(
-        "EBOLA",
-        `条件(OR)成立だが今回は発生せず（c1=${cond.c1} c2=${cond.c2} c3=${cond.c3} / p=${CONFIG.EBOLA.TRIGGER_PROB}）`
-      );
+      logLine("EBOLA", `条件(OR)成立だが今回は発生せず（c1=${cond.c1} c2=${cond.c2} c3=${cond.c3} / p=${CONFIG.EBOLA.TRIGGER_PROB}）`);
       return false;
     }
 
@@ -863,7 +857,7 @@
       "special",
       "red"
     );
-    return true; // 今ラウンド末に発生した
+    return true;
   }
 
   async function tickEbolaAtRoundEnd() {
@@ -902,7 +896,6 @@
     if (!CONFIG.WAVE.ENABLE) return { moneyMinus: 0, govMinus: 0 };
     if (waveLv <= 1) return { moneyMinus: 0, govMinus: 0 };
     if (waveLv === 2) return { moneyMinus: CONFIG.WAVE.WORK_MINUS_LV2, govMinus: 0 };
-    // Lv3
     return { moneyMinus: CONFIG.WAVE.WORK_MINUS_LV3, govMinus: CONFIG.WAVE.GOV_MINUS_LV3 };
   }
 
@@ -1006,7 +999,6 @@
       return;
     }
 
-    // 対象候補：生存者のうち未治療>0
     const candidates = players.filter((p) => p.alive && (p.untreated || 0) > 0);
     if (!candidates.length) {
       logLine("TRIAGE", "発生したが対象なし（全員未治療0）");
@@ -1026,10 +1018,8 @@
       "yellow"
     );
 
-    // 投票
-    const votes = new Map(); // targetId -> count
+    const votes = new Map();
     for (const voter of players.filter((p) => p.alive)) {
-      // 投票UI（自分も投票可能）
       await new Promise((resolve) => {
         const opts = candidates
           .map((t) => `<option value="${t.id}">${t.name}（未治療=${t.untreated}）</option>`)
@@ -1058,7 +1048,6 @@
       });
     }
 
-    // 集計
     let bestIds = [];
     let best = -1;
     for (const [id, c] of votes.entries()) {
@@ -1073,14 +1062,12 @@
     const chosenId = bestIds.length === 1 ? bestIds[0] : pick(bestIds);
     const chosen = players[chosenId];
 
-    // 治療適用
     if (chosen && chosen.alive && chosen.untreated > 0) {
       chosen.untreated = Math.max(0, chosen.untreated - 1);
       govFund -= CONFIG.TRIAGE.GOV_PAY;
 
       logLine("TRIAGE", `対象=${chosen.name}（票=${best}）→ 未治療-1 / 基金-${CONFIG.TRIAGE.GOV_PAY}`);
 
-      // 選ばれなかった“未治療者”にCP -1
       for (const p of candidates) {
         if (p.id === chosen.id) continue;
         addCP(p, CONFIG.TRIAGE.CP_PENALTY_NOT_CHOSEN, "（トリアージ落選）");
@@ -1130,19 +1117,15 @@
     return true;
   }
 
-  // ITEM tile: ランダム入手
   async function gainRandomItemAtItemTile(p) {
     const it = pick(CONFIG.ITEMS);
     addItem(p, it.key, 1);
-
-    // ✅ result tracking
     p.itemGained = (p.itemGained || 0) + 1;
-
     logLine("ITEM", `${p.name}: ランダム入手 → ${it.name}（消耗）`);
     await showOkPopup("ITEM入手（ランダム）", [`${p.name} は <b>${it.name}</b> を手に入れた！`], "item", "blue");
   }
 
- /* =========================================================
+  /* =========================================================
      Disease data
   ========================================================= */
   const DISEASES = [
@@ -1349,7 +1332,6 @@
     const playerPayBase = ins.treatPlayerPay;
     const govPay = ins.treatGovPay;
 
-    // ✅ 医療崩壊中：追加自己負担（数値はCONFIGから流用）
     const extra = medicalCollapseActive ? CONFIG.MEDICAL_COLLAPSE.EXTRA_TREAT_PLAYER_PAY : 0;
     const playerPay = playerPayBase + extra;
 
@@ -1382,7 +1364,6 @@
   }
 
   async function resolveInfect(p) {
-    // ✅ 115の「次のinfect無効」(生存者のみ)
     if (p.alive && (p.infectShield115 || 0) > 0) {
       p.infectShield115 = Math.max(0, (p.infectShield115 || 0) - 1);
       logLine("115", `${p.name}: 115の医療現場優先で infect を1回無効化`);
@@ -1397,23 +1378,20 @@
 
     const baseSev = severityOfClass(d.分類);
 
-    // 実際に適用される危険度（投資→エボラ→Wave→幽霊圧 の順）
     let sev = baseSev;
     sev = applyInvestDangerMinus(sev);
     sev = applyEbolaInfectPlus(sev);
     sev = applyWaveInfectPlus(sev);
     sev = applyDeadInfectPlus(sev);
 
-    // ✅ ストリークは「実際の危険度(sev)」でカウント
     if (sev >= 2) highSevInfectStreak += 1;
     else highSevInfectStreak = 0;
 
-    // ワクチンは145でも有効
     const vaxActive = true;
     if (vaxActive && p.vaccinated && p.vaccinatedSet.has(disease)) {
       logLine("VAX", `${p.name}: ワクチンで ${disease} を防いだ`);
       await showOkPopup("ワクチンで防いだ", [d.内容, `対象：<b>${disease}</b> → 100%回避`], "infect", "blue");
-      return; // ✅ カウントしない
+      return;
     }
 
     const usable = usableItemsForDisease(p, d);
@@ -1421,16 +1399,12 @@
     if (useRes.used && useRes.success) {
       await showOkPopup("ギリ回避！", [d.内容, `アイテム <b>${useRes.item.name}</b>（成功率${useRes.rate}%）で回避！`], "infect", "blue");
       renderTable();
-      return; // ✅ カウントしない（「感染として成立しなかった」扱い）
+      return;
     }
 
-    // ✅ infectに止まった回数（ワクチンで防いだ以外）
     p.infectLanded = (p.infectLanded || 0) + 1;
-
-    // ✅ Wave用：感染成立回数をラウンド内でカウント
     infectHitsThisRound += 1;
 
-    // ✅ 狂犬病イベント発生（ここに来る＝ワクチンで防いでない）
     if (disease === "狂犬病") rabiesOccurred = true;
 
     logLine("INFECT", `${p.name}: 感染【${disease}】危険度${sev}（base${baseSev} / WaveLv${waveLv}）`);
@@ -1478,7 +1452,7 @@
               const ok = await doTreatment(p);
               if (!ok) {
                 p.untreated += sev;
-                p.untreatedCount = (p.untreatedCount || 0) + 1; // ✅ 回数
+                p.untreatedCount = (p.untreatedCount || 0) + 1;
                 logLine("UNTREAT", `${p.name}: 未治療 +${sev}（合計 ${p.untreated}）`);
               } else {
                 logLine("TREAT", `${p.name}: 治療済み（未治療増加なし）`);
@@ -1492,7 +1466,7 @@
             onClick: () => {
               closeModal();
               p.untreated += sev;
-              p.untreatedCount = (p.untreatedCount || 0) + 1; // ✅ 回数
+              p.untreatedCount = (p.untreatedCount || 0) + 1;
               addCP(p, CONFIG.REFUSE_TREAT_CP, "（治療拒否）");
               logLine("UNTREAT", `${p.name}: 未治療 +${sev}（合計 ${p.untreated}）`);
               resolve();
@@ -1504,7 +1478,7 @@
 
     if (p.untreated >= CONFIG.UNTREATED_DEATH_THRESHOLD) {
       p.alive = false;
-      p.diedMidgame = true; // ✅ 途中死亡
+      p.diedMidgame = true;
 
       if (CONFIG.GHOST.ENABLE) {
         p.ghost = true;
@@ -1565,7 +1539,6 @@
               const before = p.insurance;
               if (sel) p.insurance = sel.value;
 
-              // ✅ 履歴（変わった時だけ）
               if (before !== p.insurance) {
                 p.insuranceHistory = p.insuranceHistory || [];
                 p.insuranceHistory.push({
@@ -1691,12 +1664,10 @@
     });
   }
 
-  // ✅ 115（選択式）：生存者だけ / 115に止まった瞬間に効果 / 各プレイヤー1回だけ
   async function resolveEvent115Choice(p) {
     if (!CONFIG.EVENT115.ENABLE) return;
     if (!p.alive) return;
 
-    // 115が「世界会議として開始」されたら、以後に止まった生存者は全員選択できる
     if (!event115Activated) event115Activated = true;
 
     if (event115ChoicesDone.has(p.id)) {
@@ -1704,7 +1675,6 @@
       return;
     }
 
-    // 149以降の終盤で変に重ならないように、115はここで確定処理
     await new Promise((resolve) => {
       showModal(
         "【115】国際緊急会議：政策を選べ（生存者のみ）",
@@ -1860,7 +1830,7 @@
     );
   }
 
-  async function resolveCollapse145(_p) {
+  async function resolveCollapse145() {
     collapseActive = true;
     logLine("145", `医療逼迫 → アイテム成功率低下（ワクチンは有効のまま）`);
     await showOkPopup(
@@ -2118,7 +2088,12 @@
     const worldBonus = worldInvestTGBonus();
 
     const tg =
-      cpClip * T.CP_WEIGHT + investPoint + trialPoint + govPoint - p.untreated * T.UNTREATED_PENALTY + worldBonus;
+      cpClip * T.CP_WEIGHT +
+      investPoint +
+      trialPoint +
+      govPoint -
+      p.untreated * T.UNTREATED_PENALTY +
+      worldBonus;
 
     return tg;
   }
@@ -2174,8 +2149,6 @@
     for (const p of alivePlayers) {
       const tg = calcTG(p);
       const out = outcomeByTG(tg);
-
-      // ✅ 最終アウトカム記録
       p.finalOutcome = out;
 
       const cpClip = clamp(p.cp, T.CP_CLAMP_MIN, T.CP_CLAMP_MAX);
@@ -2186,9 +2159,7 @@
 
       logLine(
         "TG",
-        `${p.name}: TG=${tg} / CP=${p.cp}(clip=${cpClip}) / personalInvest=${p.personalInvest}(${investPoint}) / trial=${
-          p.trialSuccess ? "success" : "no"
-        }(${trialPoint}) / govBonus=${govPoint} / untreated=${p.untreated}(-${p.untreated * T.UNTREATED_PENALTY}) / worldBonus=${worldBonus}`
+        `${p.name}: TG=${tg} / CP=${p.cp}(clip=${cpClip}) / personalInvest=${p.personalInvest}(${investPoint}) / trial=${p.trialSuccess ? "success" : "no"}(${trialPoint}) / govBonus=${govPoint} / untreated=${p.untreated}(-${p.untreated * T.UNTREATED_PENALTY}) / worldBonus=${worldBonus}`
       );
 
       if (out === "asymptomatic") {
@@ -2232,7 +2203,6 @@
 
     showResult();
 
-    // ✅ 詳細リザルト作成＆保存＆表示
     const entry = buildResultEntry();
     saveEntry(entry);
     renderDetailedResult(entry);
@@ -2249,14 +2219,12 @@
     let gain = baseNet;
     let gdelta = baseGov;
 
-    // エボラ中のWORK減衰
     if (ebolaTriggered && ebolaRemainTurns > 0) {
       const pct = ebolaWorkPenaltyPct();
       gain = baseNet - Math.floor(baseNet * (pct / 100));
       gdelta = baseGov - Math.floor(baseGov * (pct / 100));
     }
 
-    // ✅ WaveによるWORK罰（Lv2以上）
     const wp = waveWorkPenalty();
     gain = Math.max(0, gain - wp.moneyMinus);
     gdelta = Math.max(0, gdelta - wp.govMinus);
@@ -2292,10 +2260,10 @@
     const key = tile.key;
     if (key === "warn143") { startFinalPhaseAt143(); return; }
     if (key === "lockdown144") { await resolveLockdown144(p); return; }
-    if (key === "collapse145") { await resolveCollapse145(p); return; }
+    if (key === "collapse145") { await resolveCollapse145(); return; }
     if (key === "trial146") { await resolveTrial146(p); return; }
     if (key === "chaos147") { await resolveChaos147(p); return; }
-    if (key === "omen148") { await resolveOmen148(p); return; }
+    if (key === "omen148") { await resolveOmen148(); return; }
   }
 
   async function resolveTile(p) {
@@ -2345,13 +2313,13 @@
   async function doTurn() {
     if (busy) return;
     busy = true;
-    el.btnRoll.disabled = true;
+    if (el.btnRoll) el.btnRoll.disabled = true;
 
     const p = players[turn];
     if (!p || !p.alive || p.finished) {
       nextLivingTurn();
       busy = false;
-      el.btnRoll.disabled = false;
+      if (el.btnRoll) el.btnRoll.disabled = false;
       return;
     }
 
@@ -2363,7 +2331,7 @@
       renderTurn();
       nextLivingTurn();
       busy = false;
-      el.btnRoll.disabled = false;
+      if (el.btnRoll) el.btnRoll.disabled = false;
       return;
     }
 
@@ -2384,41 +2352,34 @@
     const prevTurn = turn;
     nextLivingTurn();
 
-    // ✅ ラウンド末処理（全員が1回動いたとき）
     if ((prevTurn + 1) % playerCount === 0) {
       roundCounter += 1;
 
-      // 1) 医療崩壊（ラウンド末に発生判定）
       const medTriggeredNow = await maybeTriggerMedicalCollapseAtRoundEnd();
-
-      // 2) トリアージ（医療崩壊中のみ）
       await maybeTriageAtRoundEnd();
 
-      // 3) エボラ（既存）
       const ebolaTriggeredNow = await maybeTriggerEbolaAtRoundEnd();
       if (!ebolaTriggeredNow) {
         await tickEbolaAtRoundEnd();
       }
 
-      // 4) 医療崩壊の残りターン減算（今ラウンドに発生した場合でも、次のラウンドから“減っていく”感じにする）
       if (!medTriggeredNow) {
         await tickMedicalCollapseAtRoundEnd();
       }
 
-      // 5) Wave更新（ラウンド内感染成立回数で上下）
       await waveTickAtRoundEnd();
     }
 
     renderTurn();
 
     if (allDone() && pandemicResolved) {
-      el.btnRoll.disabled = true;
+      if (el.btnRoll) el.btnRoll.disabled = true;
       busy = false;
       return;
     }
 
     busy = false;
-    el.btnRoll.disabled = false;
+    if (el.btnRoll) el.btnRoll.disabled = false;
   }
 
   /* =========================
@@ -2450,7 +2411,7 @@
   }
 
   /* =========================
-     ✅ Result detail + Save (B案)
+     ✅ Result detail + Save
   ========================= */
   function ensureDetailedResultUI() {
     if (!el.resultWrap) return;
@@ -2509,30 +2470,20 @@
       worldInvestLv: currentInvestLv(),
       ebolaOccurred: !!ebolaTriggered,
       rabiesOccurred: !!rabiesOccurred,
-
-      // ✅ 追加：Wave / 医療崩壊の最終状態
       waveLvFinal: waveLv,
       medicalCollapseOccurred: !!medicalCollapseActive || (medicalCollapseRemainTurns > 0),
-
       players: players.map((p) => ({
         name: p.name,
-
         insuranceInit: p.insuranceInit,
         insuranceFinal: p.insurance,
         insuranceHistory: p.insuranceHistory || [],
-
         vaccinatedInit: !!p.vaccinatedInit,
-
         infectLanded: p.infectLanded || 0,
         untreatedCount: p.untreatedCount || 0,
-
         moneyFinal: p.money,
         personalInvest: p.personalInvest || 0,
-
         itemGained: p.itemGained || 0,
-
         cpFinal: p.cp,
-
         statusFinal: statusFinalOf(p),
       })),
     };
@@ -2543,7 +2494,7 @@
     const raw = localStorage.getItem(key);
     const arr = raw ? JSON.parse(raw) : [];
     arr.unshift(entry);
-    arr.splice(30); // 直近30件
+    arr.splice(30);
     localStorage.setItem(key, JSON.stringify(arr));
     localStorage.setItem("IL150_LATEST", JSON.stringify(entry));
   }
@@ -2643,7 +2594,6 @@
                 const sel = document.querySelector('input[name="ins_init"]:checked');
                 if (sel) p.insurance = sel.value;
 
-                // ✅ 初期保険保存
                 p.insuranceInit = p.insurance;
 
                 closeModal();
@@ -2672,7 +2622,7 @@
 対象：${CONFIG.VACCINE_PACK.protects.join(" / ")}<br/>
 費用：<b>${CONFIG.VACCINE_PACK.cost.toLocaleString()}</b><br/>
 効果：対象疾患の infect を <b>100%で防ぐ</b><br/>
-※145「医療逼迫」でもワクチンは有効（努力が無駄にならない）
+※145「医療逼迫」でもワクチンは有効
             </div>
             <div class="small">所持金：${p.money.toLocaleString()}</div>
           `,
@@ -2686,12 +2636,12 @@
                   p.money -= CONFIG.VACCINE_PACK.cost;
                   p.vaccinated = true;
                   p.vaccinatedSet = new Set(CONFIG.VACCINE_PACK.protects);
-                  p.vaccinatedInit = true; // ✅ 初期ワクチン
+                  p.vaccinatedInit = true;
                   logLine("VAX", `${p.name}: 接種（-${CONFIG.VACCINE_PACK.cost.toLocaleString()}）`);
                 } else {
                   p.vaccinated = false;
                   p.vaccinatedSet = new Set();
-                  p.vaccinatedInit = false; // ✅ 初期ワクチン
+                  p.vaccinatedInit = false;
                   logLine("VAX", `${p.name}: 所持金不足で接種不可`);
                 }
                 renderTable();
@@ -2704,7 +2654,7 @@
                 closeModal();
                 p.vaccinated = false;
                 p.vaccinatedSet = new Set();
-                p.vaccinatedInit = false; // ✅ 初期ワクチン
+                p.vaccinatedInit = false;
                 logLine("VAX", `${p.name}: 接種しない`);
                 renderTable();
                 resolve();
@@ -2740,15 +2690,12 @@
 
     rabiesOccurred = false;
 
-    // ✅ 115 reset
     event115Activated = false;
     event115ChoicesDone = new Set();
 
-    // ✅ Wave reset
     waveLv = 0;
     infectHitsThisRound = 0;
 
-    // ✅ Medical reset
     medicalCollapseActive = false;
     medicalCollapseRemainTurns = 0;
 
@@ -2762,7 +2709,7 @@
     players = [];
     for (let i = 0; i < playerCount; i++) players.push(makePlayer(i));
 
-    const eventCount = buildBoard();
+    buildBoard();
     buildGridOverlay();
     rebuildTokens();
 
@@ -2775,78 +2722,84 @@
     setMsg("「ゲーム開始」でスタート");
     setDiceFace(1);
     closeModal();
+
     if (el.btnRoll) el.btnRoll.disabled = true;
+    if (el.btnStart) el.btnStart.disabled = false;
 
     syncPlayerCountUI();
-
-    const th = investThresholdsByPlayers(playerCount);
-    logLine("SYS", `政府基金 初期値=${CONFIG.GOV_FUND_START}`);
-    logLine("SYS", `マス数: infect=${CONFIG.INFECT_COUNT} item=${CONFIG.ITEM_COUNT} work=${CONFIG.WORK_COUNT} event=${eventCount}`);
-    logLine("SYS", `投資Lv（割合）: MAX=${th.max} / Lv1=${th.lv1} / Lv2=${th.lv2} / Lv3=${th.lv3}（10,000刻み）`);
-    logLine("SYS", `TG確定版: 閾値=${CONFIG.TG_FINAL.TH_ASYMPTOMATIC}/${CONFIG.TG_FINAL.TH_SEQUELAE} / CP±10クリップ / 個人投資反映`);
-    logLine("SYS", `世界投資TGボーナス: Lv2 +${CONFIG.TG_FINAL.WORLD_INVEST_LV2_BONUS} / Lv3 +${CONFIG.TG_FINAL.WORLD_INVEST_LV3_BONUS}`);
-    logLine("SYS", `投資→政府基金: ${Math.floor(CONFIG.INVEST_TO_GOVFUND_RATIO * 100)}% 反映`);
-    logLine("SYS", `エボラ: ラウンド末判定(OR) / p=${CONFIG.EBOLA.TRIGGER_PROB} / WORK減少=人数別`);
-    logLine("SYS", `145医療逼迫: アイテム成功率-${CONFIG.COLLAPSE.ITEM_SUCCESS_MINUS}%（下限${CONFIG.COLLAPSE.ITEM_SUCCESS_MIN}%）/ ワクチン有効`);
-    logLine("SYS", `幽霊モード: 死者は147介入可 / 死者がいる間 infect +${CONFIG.GHOST.DEAD_INFECT_PLUS}`);
-    logLine("SYS", `Wave: ラウンド内感染成立でLv変動 / 現在Lv=${waveLv}`);
-    logLine("SYS", `医療崩壊: 未治療合計>=${CONFIG.MEDICAL_COLLAPSE.TRIGGER_UNTREATED_TOTAL_AT_LEAST}でラウンド末p=${CONFIG.MEDICAL_COLLAPSE.TRIGGER_PROB}`);
-    logLine("SYS", `115: 生存者が各自1回選択（即時発動）`);
-    logLine("SYS", `ITEM: ランダム入手（狂犬病ワクチンも抽選対象）`);
   }
 
   async function startGame() {
+    if (busy) return;
+    busy = true;
+
+    if (el.btnStart) el.btnStart.disabled = true;
+    if (el.btnReset) el.btnReset.disabled = false;
+
     gameStarted = true;
     syncPlayerCountUI();
-    el.btnStart.disabled = true;
-    el.btnRoll.disabled = true;
 
     await askInitialInsurancePerPlayer();
     await askVaccinePack();
+
+    setMsg("サイコロを振って開始！");
+    if (el.btnRoll) el.btnRoll.disabled = false;
 
     renderTokens();
     renderTable();
     renderTurn();
 
-    logLine("SYS", `ゲーム開始 / 初期所持金=${CONFIG.START_MONEY}`);
-    el.btnRoll.disabled = false;
+    busy = false;
   }
 
-  function applyPlayerCount(n) {
-    const v = Math.max(CONFIG.PLAYER_MIN, Math.min(CONFIG.PLAYER_MAX, Number(n) || 4));
-    playerCount = v;
-    syncPlayerCountUI();
-  }
-
-  function onPlayerCountChange() {
-    if (gameStarted) {
-      setMsg("ゲーム開始後は人数変更できません（リセットしてから変更してね）");
-      if (el.playerCount) el.playerCount.value = String(playerCount);
-      return;
-    }
-    const n = Number(el.playerCount?.value || 4);
-    applyPlayerCount(n);
-    hardReset();
+  function safeClampPlayers(n) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return 4;
+    return Math.max(CONFIG.PLAYER_MIN, Math.min(CONFIG.PLAYER_MAX, Math.floor(x)));
   }
 
   /* =========================
-     Wiring
+     Wire events
   ========================= */
-  el.btnStart.onclick = startGame;
-  el.btnRoll.onclick = doTurn;
-  el.btnReset.onclick = () => {
-    el.btnStart.disabled = false;
-    hardReset();
-  };
-  window.addEventListener("resize", () => renderTokens());
+  function bindUI() {
+    if (el.btnStart) el.btnStart.onclick = () => startGame();
+    if (el.btnRoll) el.btnRoll.onclick = () => doTurn();
+    if (el.btnReset) el.btnReset.onclick = () => hardReset();
 
-  if (el.playerCount) {
-    applyPlayerCount(Number(el.playerCount.value || 4));
-    el.playerCount.addEventListener("change", onPlayerCountChange);
-  } else {
-    applyPlayerCount(4);
+    if (el.playerCount) {
+      el.playerCount.onchange = () => {
+        if (gameStarted) return;
+        playerCount = safeClampPlayers(el.playerCount.value);
+        syncPlayerCountUI();
+        hardReset();
+      };
+    }
+
+    // 画面リサイズでコマ位置がズレるのを防ぐ
+    let resizeTimer = null;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        renderTokens();
+      }, 120);
+    });
+
+    // モーダル背景クリックで閉じない（誤操作防止）
   }
 
-  /* Boot */
-  hardReset();
-})();
+  /* =========================
+     Boot
+  ========================= */
+  (function boot() {
+    // 初期人数はUIがあればそこを優先
+    if (el.playerCount) {
+      playerCount = safeClampPlayers(el.playerCount.value);
+    } else {
+      playerCount = 4;
+    }
+
+    bindUI();
+    hardReset();
+  })();
+
+})(); // IIFE END
