@@ -2,6 +2,7 @@
    Infectious Life 150 (main.js) - Full Rewrite
    (BALANCE PATCH v2 + GHOST PATCH + RESULT/LOG PATCH)
    + 115 CHOICE PATCH + MEDICAL COLLAPSE PATCH + TRIAGE PATCH + WAVE PATCH
+   + 148 SOCIAL EVAL PATCH
 
    ✅ RESULT/LOG PATCH
    - リザルトに以下を表示＆保存（localStorage）
@@ -16,6 +17,9 @@
      最終の生存状態（生存／後遺症／死亡／途中死亡）
      最終政府基金
      エボラ・狂犬病イベント発生の有無
+     政府基金累計貢献額
+     148社会評価ボーナス
+     最終TG
    - 直近30件を保存、最新1件は IL150_LATEST に保存
    - 結果JSONコピー機能
  ========================================================= */
@@ -86,7 +90,6 @@
       { key: "alcohol", name: "アルコール消毒", targets: ["接触"], base: 55 },
       { key: "mosquito", name: "蚊帳", targets: ["蚊媒介"], base: 60 },
       { key: "tick", name: "ダニよけ", targets: ["ダニ媒介"], base: 60 },
-      // rabiesVax is special: always 100%
       { key: "rabiesVax", name: "狂犬病ワクチン", targets: ["狂犬病"], base: 100 },
     ],
 
@@ -94,7 +97,7 @@
     INVEST_TILES: new Set([35, 75]),
     INVEST_STEP: 10000,
     INVEST_CAP_PER_TIME: 30000,
-    INVEST_FRICTION_PROB: 0.30, // 30% chance CP-1 when investing
+    INVEST_FRICTION_PROB: 0.30,
     INVEST_FRICTION_CP: -1,
 
     // 投資Lv（割合方式）
@@ -104,49 +107,46 @@
       lv3: 0.75,
     },
 
-    // 投資が政府基金に反映される割合（二重取り抑制）
+    // 投資が政府基金に反映される割合
     INVEST_TO_GOVFUND_RATIO: 0.50,
 
-    // Investment effects (公共財効果)
+    // Investment effects
     INVEST_EFFECTS: {
       infectDangerMinusAtLv1: 1,
       itemSuccessPlusAtLv2: 10,
     },
 
-    // TG FINAL (CONFIRMED)
+    // TG FINAL
     TG_FINAL: {
       CP_CLAMP_MIN: -10,
       CP_CLAMP_MAX: 10,
       CP_WEIGHT: 2,
-      INVEST_PERSONAL_DIV: 10000, // 個人累計投資額 ÷ 10000
+      INVEST_PERSONAL_DIV: 10000,
       TRIAL_SUCCESS_BONUS: 3,
       UNTREATED_PENALTY: 2,
-      // 世界投資Lvボーナス（調整）
-      WORLD_INVEST_LV2_BONUS: 1, // Lv2到達で +1
-      WORLD_INVEST_LV3_BONUS: 8, // Lv3到達で +8
+      WORLD_INVEST_LV2_BONUS: 1,
+      WORLD_INVEST_LV3_BONUS: 8,
       TH_ASYMPTOMATIC: 15,
       TH_SEQUELAE: 8,
     },
 
-    // Ebola: round-end check, one-time, 2-4 rounds duration
+    // 148 社会評価
+    SOCIAL_EVAL: {
+      BONUS_PER_CATEGORY: 2,
+      MAX_CATEGORIES_PER_PLAYER: 2,
+    },
+
+    // Ebola
     EBOLA: {
       ENABLE: true,
       MIN_TILE_GATE: 50,
       DURATION_TURNS_MIN: 2,
       DURATION_TURNS_MAX: 4,
-
-      // OR条件成立時の発生確率（抑える）
       TRIGGER_PROB: 0.28,
-
-      // 「基金がこの基準未満」条件は人数スケール（4人基準）
       GOVFUND_LT_BASE_4P: 300000,
-
       HIGH_SEV_STREAK_NEED: 2,
       AVG_CP_MAX: 6,
-
       INFECT_DANGER_PLUS: 1,
-
-      // WORK減少（人数別）
       WORK_PENALTY_BY_PLAYERS: {
         1: 10,
         2: 12,
@@ -156,18 +156,18 @@
       },
     },
 
-    // 145 collapse: weaken items (NOT disable), vaccines still active
+    // 145 collapse
     COLLAPSE_TILE: 145,
     COLLAPSE: {
-      ITEM_SUCCESS_MINUS: 20, // -20%
-      ITEM_SUCCESS_MIN: 10, // 下限10%
+      ITEM_SUCCESS_MINUS: 20,
+      ITEM_SUCCESS_MIN: 10,
     },
 
     // Trial at 146
     TRIAL_TILE: 146,
     TRIAL: {
       BASE_NEED: 2,
-      BONUS_PER_INVEST_UNIT: 50000, // 全体投資で成功範囲が拡大
+      BONUS_PER_INVEST_UNIT: 50000,
       MAX_BONUS: 2,
       CP_SUCCESS: 2,
       CP_FAIL: -3,
@@ -180,7 +180,7 @@
       DEATH_PCT: 70,
     },
 
-    // ✅ 115 global event (one-time / per-player choice)
+    // 115 global event
     EVENT115: {
       ENABLE: true,
       GOVFUND_DELTA_PER_PLAYER: 15000,
@@ -189,31 +189,28 @@
       LOG_TEXT: "【115】国際緊急会議：政策決定が行われた",
     },
 
-    // ✅ Ghost mode
+    // Ghost mode
     GHOST: {
       ENABLE: true,
-      DEAD_INFECT_PLUS: 1, // 死者が1人でもいれば infect危険度 +1（上限SEV_MAX）
-      ENABLE_ON_147: true, // 147で幽霊も介入できる
+      DEAD_INFECT_PLUS: 1,
+      ENABLE_ON_147: true,
     },
 
-    // ✅ 感染波（Wave）
+    // Wave
     WAVE: {
       ENABLE: true,
       LV_MAX: 3,
-      // ラウンド内「感染成立（ワクチン/アイテムで防げなかった）」回数で上下
-      UP_IF_INFECT_HITS_AT_LEAST: 3,  // =UNTREATED_DEATH_THRESHOLD
-      DOWN_IF_INFECT_HITS_AT_MOST: 1, // =SEV_MIN
-      // 影響
+      UP_IF_INFECT_HITS_AT_LEAST: 3,
+      DOWN_IF_INFECT_HITS_AT_MOST: 1,
       INFECT_PLUS_LV1: 1,
       INFECT_PLUS_LV2: 1,
       INFECT_PLUS_LV3: 2,
-      // WORK罰
       WORK_MINUS_LV2: 2000,
       WORK_MINUS_LV3: 5000,
       GOV_MINUS_LV3: 10000,
     },
 
-    // ✅ 医療崩壊（システムイベント：145とは別）
+    // Medical collapse
     MEDICAL_COLLAPSE: {
       ENABLE: true,
       TRIGGER_UNTREATED_TOTAL_AT_LEAST: 3,
@@ -224,7 +221,7 @@
       LOG_TEXT: "【医療崩壊】病床・人員不足。治療コスト上昇＆トリアージが発生しうる。",
     },
 
-    // ✅ トリアージ（医療崩壊中のみ）
+    // Triage
     TRIAGE: {
       ENABLE: true,
       UNTREATED_TOTAL_AT_LEAST: 3,
@@ -277,6 +274,7 @@
     el.log.textContent += `[${tag}] ${s}\n`;
     el.log.scrollTop = el.log.scrollHeight;
   }
+
   function setMsg(s) {
     if (el.msgBox) el.msgBox.textContent = s;
   }
@@ -292,12 +290,15 @@
     }
     return Math.random();
   }
+
   function randInt(min, maxInclusive) {
     return min + Math.floor(rand01() * (maxInclusive - min + 1));
   }
+
   function pick(arr) {
     return arr[Math.floor(rand01() * arr.length)];
   }
+
   function shuffle(a) {
     for (let i = a.length - 1; i > 0; i--) {
       const j = randInt(0, i);
@@ -323,6 +324,7 @@
     }
     el.modalBack.style.display = "flex";
   }
+
   function closeModal() {
     if (!el.modalBack) return;
     el.modalBack.style.display = "none";
@@ -330,6 +332,7 @@
     el.modalBody.innerHTML = "";
     el.modalFoot.innerHTML = "";
   }
+
   function showOkPopup(title, lines = [], _tone = "info", color = "") {
     const cls = color ? ` pop-${String(color).toLowerCase().trim()}` : "";
     const body = `
@@ -339,7 +342,16 @@
       </div>
     `;
     return new Promise((resolve) => {
-      showModal(title, body, [{ text: "OK", className: "btnPrimary", onClick: () => (closeModal(), resolve()) }]);
+      showModal(title, body, [
+        {
+          text: "OK",
+          className: "btnPrimary",
+          onClick: () => {
+            closeModal();
+            resolve();
+          },
+        },
+      ]);
     });
   }
 
@@ -354,9 +366,11 @@
     const x = col * 50;
     const y = row * 100;
     el.diceImg.style.backgroundImage = `url("${CONFIG.DICE_IMG}")`;
-    el.diceImg.style.backgroundPosition = `${x}% ${y}%`;
+    el.diceImg.style.backgroundPosition = `-${x}px -${y}px`;
   }
+
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
   async function rollDiceAnimated() {
     setMsg("サイコロ中…");
     let ticks = 0;
@@ -384,22 +398,24 @@
     if (pos <= 80) return "polluted";
     return "urban";
   }
+
   function envTag(env) {
     if (env === "urban") return `<span class="tag u">都市</span>`;
     if (env === "tropical") return `<span class="tag t">熱帯</span>`;
     return `<span class="tag p">汚染</span>`;
   }
 
-  // Board types
   const board = new Array(CONFIG.MAX_TILE + 1).fill(null);
+
   const GOV_TILES = new Set([35, 75, 115, 149]);
+
   const SPECIAL_TILES = new Map([
     [143, { type: "event", key: "warn143", text: "【警告】不穏な噂が広がる…（順位を記録）" }],
     [144, { type: "event", key: "lockdown144", text: "【ロックダウン】止まった人の所持金が一定%減少" }],
     [145, { type: "event", key: "collapse145", text: "【医療逼迫】アイテム成功率低下（ワクチンは有効）" }],
     [146, { type: "event", key: "trial146", text: "【ワクチン治験】参加する？" }],
     [147, { type: "event", key: "chaos147", text: "【情報錯綜】貢献度が変動" }],
-    [148, { type: "event", key: "omen148", text: "【前兆】未知のウイルスが…" }],
+    [148, { type: "event", key: "socialEval148", text: "【社会評価】全生存プレイヤーが148以上で一括評価" }],
     [149, { type: "pandemic", key: "pandemic149", text: "未知のウイルス・パンデミック（全員停止）" }],
     [150, { type: "goal", key: "goal150", text: "ゴール！" }],
   ]);
@@ -407,13 +423,11 @@
   function buildBoard() {
     for (let i = 1; i <= CONFIG.MAX_TILE; i++) board[i] = { type: "safe", text: "安全" };
 
-    // GOV fixed
     for (const g of GOV_TILES) {
       if (g === 149) board[g] = { ...SPECIAL_TILES.get(149) };
       else board[g] = { type: "gov", text: `中央政府マス(${g})` };
     }
 
-    // 143-150 fixed
     for (const [pos, t] of SPECIAL_TILES) board[pos] = { ...t };
 
     const candidates = [];
@@ -452,6 +466,7 @@
   function buildGridOverlay() {
     if (!el.gridLayer) return;
     el.gridLayer.innerHTML = "";
+
     const labelOf = (type) =>
       ({
         infect: "INFECT",
@@ -488,6 +503,7 @@
     const col = idx % CONFIG.COLS;
     return { row, col };
   }
+
   function tileCenterPx(tile) {
     if (!el.boardBox) return { x: 0, y: 0 };
     const w = el.boardBox.clientWidth;
@@ -510,11 +526,11 @@
   let govFund = CONFIG.GOV_FUND_START;
 
   // Investment
-  let investTotal = 0; // 全体投資（公共財）
+  let investTotal = 0;
   let investedAt35 = new Set();
   let investedAt75 = new Set();
 
-  // Collapse(145): weaken items only
+  // Collapse(145)
   let collapseActive = false;
 
   // End phase
@@ -522,26 +538,29 @@
   let rankSnapshotAt143 = null;
   let pandemicResolved = false;
 
+  // 148 社会評価
+  let socialEvalTriggered = false;
+
   // Ebola
   let ebolaTriggered = false;
-  let ebolaRemainTurns = 0; // “ラウンド”単位
+  let ebolaRemainTurns = 0;
   let highSevInfectStreak = 0;
   let roundCounter = 0;
 
-  // ✅ Rabies (for result)
+  // Rabies
   let rabiesOccurred = false;
 
-  // ✅ 115: choice system
-  let event115Activated = false;      // 115を誰かが踏んだ（世界会議開始）
-  let event115ChoicesDone = new Set(); // player.id を記録（生存者のみ／1回だけ）
+  // 115
+  let event115Activated = false;
+  let event115ChoicesDone = new Set();
 
-  // ✅ Wave
+  // Wave
   let waveLv = 0;
-  let infectHitsThisRound = 0; // 「ワクチン/アイテムで防げず、感染成立した」回数
+  let infectHitsThisRound = 0;
 
-  // ✅ Medical collapse / triage
+  // Medical collapse / triage
   let medicalCollapseActive = false;
-  let medicalCollapseRemainTurns = 0; // ラウンド単位
+  let medicalCollapseRemainTurns = 0;
 
   function insuranceText(code) {
     return CONFIG.INSURANCE[code]?.name ?? String(code);
@@ -566,29 +585,29 @@
       trialJoined: false,
       trialSuccess: false,
 
-      // TG: 個人累計投資額
       personalInvest: 0,
 
-      // ✅ Ghost
+      // 148 社会評価用
+      govFundContribution: 0,
+      socialEvalBonus: 0,
+      socialEvalCategories: [],
+
       ghost: false,
       moneyFrozen: false,
 
-      // ✅ 115 option: infect shield
-      infectShield115: 0, // 次のinfectを1回だけ無効化
+      infectShield115: 0,
 
-      /* =========================
-         ✅ RESULT / LOG TRACKING
-      ========================= */
       insuranceInit: "B",
-      insuranceHistory: [], // {from,to,atTile,round}
+      insuranceHistory: [],
       vaccinatedInit: false,
 
-      infectLanded: 0,      // infectに止まって「ワクチンで防いだ以外」の回数
-      untreatedCount: 0,    // 未治療“回数”（sev加算の回数）
-      itemGained: 0,        // アイテム獲得数
+      infectLanded: 0,
+      untreatedCount: 0,
+      itemGained: 0,
 
-      diedMidgame: false,   // untreated>=3 の盤上死亡
-      finalOutcome: null,   // "asymptomatic" | "sequelae" | "death"
+      diedMidgame: false,
+      finalOutcome: null,
+      finalTG: null,
     };
   }
 
@@ -597,6 +616,11 @@
     p.cp = p.cp + delta;
     const sign = delta >= 0 ? "+" : "";
     logLine("CP", `${p.name}: ${before} → ${p.cp} (${sign}${delta}) ${reason}`.trim());
+  }
+
+  function addGovContribution(p, amount) {
+    if (!p || !Number.isFinite(amount) || amount <= 0) return;
+    p.govFundContribution = (p.govFundContribution || 0) + amount;
   }
 
   /* =========================
@@ -612,6 +636,7 @@
       el.tokensLayer.appendChild(d);
     }
   }
+
   function updateDeadRack() {
     if (!el.deadRack) return;
     el.deadRack.querySelectorAll(".deadToken").forEach((x) => x.remove());
@@ -623,6 +648,7 @@
       }
     }
   }
+
   function placeToken(p) {
     const t = document.getElementById(`token_${p.id}`);
     if (!t) return;
@@ -631,6 +657,7 @@
     t.style.top = `${y}px`;
     t.style.opacity = p.alive ? "1" : "0.25";
   }
+
   function renderTokens() {
     for (const p of players) placeToken(p);
     updateDeadRack();
@@ -665,7 +692,6 @@
       const vaxTag = p.vaccinated ? `<span class="tag">💉済</span>` : "";
       const ghostTag = !p.alive && p.ghost ? `<span class="tag">👻</span>` : "";
       const deadMark = p.alive ? "" : " 💀";
-
       const waveTag = CONFIG.WAVE.ENABLE ? `<span class="tag t">WaveLv${waveLv}</span>` : "";
       const medTag = medicalCollapseActive ? `<span class="tag p">医療崩壊${medicalCollapseRemainTurns}</span>` : "";
 
@@ -711,7 +737,9 @@
      Movement with STOP tiles
   ========================= */
   function findNextStopInRange(from, to) {
-    for (let t = from + 1; t <= to; t++) if (CONFIG.STOP_TILES.has(t)) return t;
+    for (let t = from + 1; t <= to; t++) {
+      if (CONFIG.STOP_TILES.has(t)) return t;
+    }
     return null;
   }
 
@@ -733,10 +761,9 @@
   }
 
   /* =========================
-     Investment thresholds (割合方式)
+     Investment thresholds
   ========================= */
   function maxTotalInvestment(nPlayers) {
-    // 人数 × 2回 × 30,000
     return Math.max(0, nPlayers) * 2 * CONFIG.INVEST_CAP_PER_TIME;
   }
 
@@ -761,6 +788,7 @@
     if (total >= th.lv1) return 1;
     return 0;
   }
+
   function currentInvestLv() {
     return investLevel(investTotal, playerCount);
   }
@@ -786,8 +814,7 @@
   }
 
   /* =========================
-     GovFund stage bonus (-2..+2)
-     ※人数別基準（4人基準をスケール）
+     GovFund stage bonus
   ========================= */
   function ebolaGovThreshold(nPlayers) {
     const scale = (Number(nPlayers) || 4) / 4;
@@ -797,7 +824,6 @@
   function govFundStageBonus(playersArr, world) {
     const base = ebolaGovThreshold(playersArr.length);
     const r = world.govFund / base;
-
     if (r < 0.60) return -2;
     if (r < 0.80) return -1;
     if (r <= 1.20) return 0;
@@ -813,11 +839,11 @@
     if (!alive.length) return 0;
     return alive.reduce((s, p) => s + p.cp, 0) / alive.length;
   }
+
   function ebolaGateOK() {
     return players.some((p) => p.alive && p.pos >= CONFIG.EBOLA.MIN_TILE_GATE);
   }
 
-  // OR条件
   function ebolaConditionsMetOR() {
     const c1 = govFund < ebolaGovThreshold(playerCount);
     const c2 = highSevInfectStreak >= CONFIG.EBOLA.HIGH_SEV_STREAK_NEED;
@@ -878,7 +904,7 @@
   }
 
   /* =========================
-     ✅ Wave (round-end + infect/work effects)
+     Wave
   ========================= */
   function applyWaveInfectPlus(sev) {
     if (!CONFIG.WAVE.ENABLE) return sev;
@@ -934,7 +960,7 @@
   }
 
   /* =========================
-     ✅ Medical collapse + triage (round-end)
+     Medical collapse + triage
   ========================= */
   function untreatedTotalAlive() {
     return players.filter((p) => p.alive).reduce((s, p) => s + (p.untreated || 0), 0);
@@ -1095,6 +1121,7 @@
   function deadGhostCount() {
     return players.filter((x) => !x.alive && x.ghost).length;
   }
+
   function applyDeadInfectPlus(sev) {
     if (!CONFIG.GHOST.ENABLE) return sev;
     if (deadGhostCount() <= 0) return sev;
@@ -1107,9 +1134,11 @@
   function hasItem(p, key) {
     return (p.items[key] || 0) > 0;
   }
+
   function addItem(p, key, n = 1) {
     p.items[key] = (p.items[key] || 0) + n;
   }
+
   function useItem(p, key) {
     if (!hasItem(p, key)) return false;
     p.items[key] -= 1;
@@ -1125,9 +1154,9 @@
     await showOkPopup("ITEM入手（ランダム）", [`${p.name} は <b>${it.name}</b> を手に入れた！`], "item", "blue");
   }
 
-  /* =========================================================
+  /* =========================
      Disease data
-  ========================================================= */
+  ========================= */
   const DISEASES = [
     { 分類: "red", 疾病候補: "エボラ出血熱", アイテム効果: "なし", 内容: "洞窟に入ってコウモリと接触、エボラウィルスに感染！", 発生場所: "ラスボス" },
 
@@ -1193,16 +1222,19 @@
     if (c === "red" || c === "yellow" || c === "blue") return c;
     return "blue";
   }
+
   function severityOfClass(cls) {
     const c = normalizeColor(cls);
     return CONFIG.SEV_BY_CLASS[c] ?? 1;
   }
+
   function envOfDiseasePlace(place) {
     if (place === "熱帯") return "tropical";
     if (place === "汚染") return "polluted";
     if (place === "都市") return "urban";
     return "boss";
   }
+
   function buildPools() {
     const src = Array.isArray(DISEASES) ? DISEASES : [];
     const urban = src.filter((d) => envOfDiseasePlace(d.発生場所) === "urban");
@@ -1211,6 +1243,7 @@
     const any = src.filter((d) => envOfDiseasePlace(d.発生場所) !== "boss");
     return { urban, tropical, polluted, any };
   }
+
   let pool = null;
 
   function drawDiseaseForEnv(env) {
@@ -1223,10 +1256,7 @@
   function parseItemHint(hint) {
     const s = String(hint || "").trim();
     if (!s || s === "なし") return [];
-    return s
-      .split("/")
-      .map((x) => x.trim())
-      .filter(Boolean);
+    return s.split("/").map((x) => x.trim()).filter(Boolean);
   }
 
   function usableItemsForDisease(p, d) {
@@ -1248,8 +1278,8 @@
       if (nm === "ダニ除け" || nm === "ダニよけ") { pushIfHas("tick"); continue; }
       if (nm === "狂犬病ワクチン") { pushIfHas("rabiesVax"); continue; }
       if (nm === "マスク") { pushIfHas("mask"); continue; }
-      if (nm === "マスク/N95/アルコール消毒") { ["mask","n95","alcohol"].forEach(pushIfHas); continue; }
-      if (nm === "マスク/N95") { ["mask","n95"].forEach(pushIfHas); continue; }
+      if (nm === "マスク/N95/アルコール消毒") { ["mask", "n95", "alcohol"].forEach(pushIfHas); continue; }
+      if (nm === "マスク/N95") { ["mask", "n95"].forEach(pushIfHas); continue; }
     }
 
     return Array.from(usableKeys)
@@ -1318,7 +1348,13 @@
               resolve({ used: true, success, item: it, rate });
             },
           },
-          { text: "使わない", onClick: () => { closeModal(); resolve({ used: false, success: false, item: null, rate: 0 }); } },
+          {
+            text: "使わない",
+            onClick: () => {
+              closeModal();
+              resolve({ used: false, success: false, item: null, rate: 0 });
+            },
+          },
         ]
       );
     });
@@ -1357,6 +1393,7 @@
     if (!ebolaTriggered || ebolaRemainTurns <= 0) return baseSev;
     return Math.min(CONFIG.SEV_MAX, baseSev + CONFIG.EBOLA.INFECT_DANGER_PLUS);
   }
+
   function applyInvestDangerMinus(baseSev) {
     const lv = currentInvestLv();
     if (lv < 1) return baseSev;
@@ -1580,7 +1617,7 @@
       ...investEffectsSummary(lv),
       `デメリット：投資した瞬間、${Math.floor(CONFIG.INVEST_FRICTION_PROB * 100)}%でCP${CONFIG.INVEST_FRICTION_CP}`,
       `※TGの投資点は「個人累計投資額÷10000」`,
-      `※投資は政府基金に ${Math.floor(CONFIG.INVEST_TO_GOVFUND_RATIO * 100)}% だけ反映（調整済み）`,
+      `※投資は政府基金に ${Math.floor(CONFIG.INVEST_TO_GOVFUND_RATIO * 100)}% だけ反映`,
     ];
 
     await new Promise((resolve) => {
@@ -1615,6 +1652,7 @@
 
               const addToGov = Math.floor(amt * CONFIG.INVEST_TO_GOVFUND_RATIO);
               govFund += addToGov;
+              addGovContribution(p, addToGov);
 
               investTotal += amt;
               p.personalInvest += amt;
@@ -1629,7 +1667,7 @@
               const newLv = currentInvestLv();
               logLine(
                 "INVEST",
-                `${p.name}: 投資 +${amt.toLocaleString()}（基金+${addToGov.toLocaleString()} / 基金=${govFund.toLocaleString()} / 総投資=${investTotal.toLocaleString()} / 個人累計=${p.personalInvest.toLocaleString()} / Lv${newLv}）`
+                `${p.name}: 投資 +${amt.toLocaleString()}（基金+${addToGov.toLocaleString()} / 基金=${govFund.toLocaleString()} / 総投資=${investTotal.toLocaleString()} / 個人累計=${p.personalInvest.toLocaleString()} / 基金貢献累計=${p.govFundContribution.toLocaleString()} / Lv${newLv}）`
               );
 
               await showOkPopup(
@@ -1638,6 +1676,7 @@
                   `${p.name} は投資した：+${amt.toLocaleString()}`,
                   `政府基金への反映：+${addToGov.toLocaleString()}（${Math.floor(CONFIG.INVEST_TO_GOVFUND_RATIO * 100)}%）`,
                   `個人累計：${p.personalInvest.toLocaleString()}（TG用）`,
+                  `基金貢献累計：${p.govFundContribution.toLocaleString()}（148社会貢献用）`,
                   `総投資：${investTotal.toLocaleString()} → Lv${newLv}（公共財効果）`,
                   ...investEffectsSummary(newLv),
                 ],
@@ -1708,13 +1747,15 @@
               closeModal();
               event115ChoicesDone.add(p.id);
               govFund += CONFIG.EVENT115.GOVFUND_DELTA_PER_PLAYER;
+              addGovContribution(p, CONFIG.EVENT115.GOVFUND_DELTA_PER_PLAYER);
               addCP(p, CONFIG.EVENT115.CP_DELTA, "（115：公衆衛生）");
-              logLine("115", `${p.name}: ②公衆衛生 fund +${CONFIG.EVENT115.GOVFUND_DELTA_PER_PLAYER} / CP +${CONFIG.EVENT115.CP_DELTA}`);
+              logLine("115", `${p.name}: ②公衆衛生 fund +${CONFIG.EVENT115.GOVFUND_DELTA_PER_PLAYER} / CP +${CONFIG.EVENT115.CP_DELTA} / 基金貢献累計=${p.govFundContribution}`);
               await showOkPopup(
                 "115：公衆衛生",
                 [
                   `${p.name} CP +${CONFIG.EVENT115.CP_DELTA}`,
                   `政府基金 +${CONFIG.EVENT115.GOVFUND_DELTA_PER_PLAYER.toLocaleString()}`,
+                  `基金貢献累計：${p.govFundContribution.toLocaleString()}`,
                 ],
                 "event",
                 "yellow"
@@ -1768,9 +1809,9 @@
     }
   }
 
-  /* =========================================================
-     Endgame (143-150), TG, Turn loop, Start/Reset
-  ========================================================= */
+  /* =========================
+     Endgame helpers
+  ========================= */
   function getRankOrderByMoneyThenCP() {
     const arr = players.slice();
     arr.sort((a, b) => {
@@ -1809,6 +1850,7 @@
         if (p.pos < 143) p.pos = 143;
       }
     }
+
     renderTokens();
     renderTable();
     renderTurn();
@@ -2066,8 +2108,96 @@
     await ghostInterveneAt147();
   }
 
+  function getAlivePlayersForSocialEval() {
+    return players.filter((p) => p.alive);
+  }
+
+  function shouldTriggerSocialEval148() {
+    if (socialEvalTriggered) return false;
+    const alive = getAlivePlayersForSocialEval();
+    if (!alive.length) return false;
+    return alive.every((p) => p.pos >= 148);
+  }
+
+  function topPlayersBy(selector) {
+    const alive = getAlivePlayersForSocialEval();
+    if (!alive.length) return [];
+
+    let best = -Infinity;
+    for (const p of alive) {
+      const v = selector(p);
+      if (v > best) best = v;
+    }
+    return alive.filter((p) => selector(p) === best);
+  }
+
+  async function resolveSocialEval148() {
+    if (socialEvalTriggered) return;
+    if (!shouldTriggerSocialEval148()) return;
+
+    const alive = getAlivePlayersForSocialEval();
+    if (!alive.length) return;
+
+    const cpWinners = topPlayersBy((p) => p.cp);
+    const moneyWinners = topPlayersBy((p) => p.money);
+    const fundWinners = topPlayersBy((p) => p.govFundContribution || 0);
+
+    const categoriesMap = new Map();
+    for (const p of alive) categoriesMap.set(p.id, []);
+
+    for (const p of cpWinners) categoriesMap.get(p.id).push("医療英雄");
+    for (const p of moneyWinners) categoriesMap.get(p.id).push("経済貢献");
+    for (const p of fundWinners) categoriesMap.get(p.id).push("社会貢献");
+
+    for (const p of alive) {
+      const allCats = categoriesMap.get(p.id) || [];
+      const applied = allCats.slice(0, CONFIG.SOCIAL_EVAL.MAX_CATEGORIES_PER_PLAYER);
+      p.socialEvalCategories = applied;
+      p.socialEvalBonus = applied.length * CONFIG.SOCIAL_EVAL.BONUS_PER_CATEGORY;
+      logLine(
+        "148",
+        `${p.name}: categories=${allCats.join(",") || "なし"} / 適用=${applied.join(",") || "なし"} / bonus=+${p.socialEvalBonus}`
+      );
+    }
+
+    socialEvalTriggered = true;
+
+    const cpText = cpWinners.map((p) => p.name).join(", ");
+    const moneyText = moneyWinners.map((p) => p.name).join(", ");
+    const fundText = fundWinners.map((p) => p.name).join(", ");
+
+    await showOkPopup(
+      "148 社会評価 一括実行",
+      [
+        `医療英雄（最終CPトップ）：<b>${cpText || "なし"}</b>`,
+        `経済貢献（最終所持金トップ）：<b>${moneyText || "なし"}</b>`,
+        `社会貢献（基金貢献トップ）：<b>${fundText || "なし"}</b>`,
+        `※ 1人が得られるのは最大${CONFIG.SOCIAL_EVAL.MAX_CATEGORIES_PER_PLAYER}種類、最大 +${CONFIG.SOCIAL_EVAL.MAX_CATEGORIES_PER_PLAYER * CONFIG.SOCIAL_EVAL.BONUS_PER_CATEGORY}`,
+      ],
+      "event",
+      "yellow"
+    );
+
+    renderTable();
+  }
+
   async function resolveOmen148() {
-    await showOkPopup("前兆", ["検査も治療も追いつかない…", "次は 149：全員集合でTG判定"], "event", "yellow");
+    if (shouldTriggerSocialEval148()) {
+      await resolveSocialEval148();
+      await showOkPopup(
+        "前兆",
+        ["社会評価が確定した。次は 149：全員集合でTG判定"],
+        "event",
+        "yellow"
+      );
+    } else {
+      await showOkPopup(
+        "前兆",
+        ["まだ全生存プレイヤーが148以上に到達していない。149で待機になる可能性あり。"],
+        "event",
+        "yellow"
+      );
+    }
   }
 
   function clamp(n, lo, hi) {
@@ -2086,6 +2216,7 @@
     const trialPoint = p.trialSuccess ? T.TRIAL_SUCCESS_BONUS : 0;
     const govPoint = govFundBonus();
     const worldBonus = worldInvestTGBonus();
+    const socialEvalPoint = p.socialEvalBonus || 0;
 
     const tg =
       cpClip * T.CP_WEIGHT +
@@ -2093,7 +2224,8 @@
       trialPoint +
       govPoint -
       p.untreated * T.UNTREATED_PENALTY +
-      worldBonus;
+      worldBonus +
+      socialEvalPoint;
 
     return tg;
   }
@@ -2121,10 +2253,19 @@
   async function resolvePandemicIfReady() {
     if (pandemicResolved) return;
 
+    if (!socialEvalTriggered) {
+      if (shouldTriggerSocialEval148()) {
+        await resolveSocialEval148();
+      } else {
+        setMsg("149にいても、148社会評価がまだなら待機！");
+        return;
+      }
+    }
+
     const alivePlayers = players.filter((p) => p.alive);
     const allAt149 = alivePlayers.length > 0 && alivePlayers.every((p) => p.pos === 149);
     if (!allAt149) {
-      setMsg("149に全員集合するとTG判定！");
+      setMsg("149に全生存プレイヤー集合するとTG判定！");
       return;
     }
 
@@ -2136,11 +2277,11 @@
     await showOkPopup(
       "パンデミック最終判定",
       [
-        "ここはダイスではなく TG（治療グレード）で決まる（確定版）。",
+        "ここはダイスではなく TG（治療グレード）で決まる。",
         `TG ≥ ${T.TH_ASYMPTOMATIC}：無症状生存（所持金変動なし）`,
         `TG ${T.TH_SEQUELAE}〜${T.TH_ASYMPTOMATIC - 1}：後遺症（所持金 -${CONFIG.FINAL_MONEY.SEQUELAE_PCT}%）`,
         `TG ≤ ${T.TH_SEQUELAE - 1}：死亡（所持金 -${CONFIG.FINAL_MONEY.DEATH_PCT}%）`,
-        "順位：所持金（同額ならCPが高い方）",
+        "順位：生存状態 → 所持金 → TG",
       ],
       "pandemic",
       "red"
@@ -2148,6 +2289,7 @@
 
     for (const p of alivePlayers) {
       const tg = calcTG(p);
+      p.finalTG = tg;
       const out = outcomeByTG(tg);
       p.finalOutcome = out;
 
@@ -2156,19 +2298,33 @@
       const trialPoint = p.trialSuccess ? T.TRIAL_SUCCESS_BONUS : 0;
       const govPoint = govFundBonus();
       const worldBonus = worldInvestTGBonus();
+      const socialEvalPoint = p.socialEvalBonus || 0;
 
       logLine(
         "TG",
-        `${p.name}: TG=${tg} / CP=${p.cp}(clip=${cpClip}) / personalInvest=${p.personalInvest}(${investPoint}) / trial=${p.trialSuccess ? "success" : "no"}(${trialPoint}) / govBonus=${govPoint} / untreated=${p.untreated}(-${p.untreated * T.UNTREATED_PENALTY}) / worldBonus=${worldBonus}`
+        `${p.name}: TG=${tg} / CP=${p.cp}(clip=${cpClip}) / personalInvest=${p.personalInvest}(${investPoint}) / trial=${p.trialSuccess ? "success" : "no"}(${trialPoint}) / govBonus=${govPoint} / untreated=${p.untreated}(-${p.untreated * T.UNTREATED_PENALTY}) / worldBonus=${worldBonus} / socialEvalBonus=${socialEvalPoint}`
       );
 
       if (out === "asymptomatic") {
-        await showOkPopup(`${p.name}：無症状生存`, [`TG=${tg}（>=${T.TH_ASYMPTOMATIC}）`, "所持金：変動なし"], "pandemic", "blue");
+        await showOkPopup(
+          `${p.name}：無症状生存`,
+          [
+            `TG=${tg}（>=${T.TH_ASYMPTOMATIC}）`,
+            `148ボーナス：+${socialEvalPoint}`,
+            "所持金：変動なし",
+          ],
+          "pandemic",
+          "blue"
+        );
       } else if (out === "sequelae") {
         const { pct, loss } = applyFinalMoneyPenalty(p, out);
         await showOkPopup(
           `${p.name}：後遺症つきで生存`,
-          [`TG=${tg}（${T.TH_SEQUELAE}〜${T.TH_ASYMPTOMATIC - 1}）`, `所持金：-${pct}%（-${loss.toLocaleString()}）`],
+          [
+            `TG=${tg}（${T.TH_SEQUELAE}〜${T.TH_ASYMPTOMATIC - 1}）`,
+            `148ボーナス：+${socialEvalPoint}`,
+            `所持金：-${pct}%（-${loss.toLocaleString()}）`,
+          ],
           "pandemic",
           "yellow"
         );
@@ -2176,7 +2332,12 @@
         const { pct, loss } = applyFinalMoneyPenalty(p, out);
         await showOkPopup(
           `${p.name}：死亡`,
-          [`TG=${tg}（<=${T.TH_SEQUELAE - 1}）`, `所持金：-${pct}%（-${loss.toLocaleString()}）`, "💀 退場"],
+          [
+            `TG=${tg}（<=${T.TH_SEQUELAE - 1}）`,
+            `148ボーナス：+${socialEvalPoint}`,
+            `所持金：-${pct}%（-${loss.toLocaleString()}）`,
+            "💀 退場",
+          ],
           "pandemic",
           "red"
         );
@@ -2231,11 +2392,15 @@
 
     p.money += gain;
     govFund += gdelta;
+    if (gdelta > 0) addGovContribution(p, gdelta);
 
     const cpDelta = CONFIG.WORK_CP[ins] ?? 0;
     if (cpDelta !== 0) addCP(p, cpDelta, "（WORK）");
 
-    logLine("WORK", `${p.name}: 手取り +${gain.toLocaleString()}（保険${ins}）/ 政府 +${gdelta.toLocaleString()}（基金=${govFund.toLocaleString()}）`);
+    logLine(
+      "WORK",
+      `${p.name}: 手取り +${gain.toLocaleString()}（保険${ins}）/ 政府 +${gdelta.toLocaleString()}（基金=${govFund.toLocaleString()} / 基金貢献累計=${p.govFundContribution.toLocaleString()}）`
+    );
   }
 
   async function resolveEvent(p, tile) {
@@ -2263,7 +2428,7 @@
     if (key === "collapse145") { await resolveCollapse145(); return; }
     if (key === "trial146") { await resolveTrial146(p); return; }
     if (key === "chaos147") { await resolveChaos147(p); return; }
-    if (key === "omen148") { await resolveOmen148(); return; }
+    if (key === "socialEval148") { await resolveOmen148(); return; }
   }
 
   async function resolveTile(p) {
@@ -2283,11 +2448,21 @@
     }
 
     switch (tile.type) {
-      case "work": await resolveWork(p); break;
-      case "item": await resolveItem(p); break;
-      case "event": await resolveEvent(p, tile); break;
-      case "infect": await resolveInfect(p); break;
-      case "gov": await resolveGov(p); break;
+      case "work":
+        await resolveWork(p);
+        break;
+      case "item":
+        await resolveItem(p);
+        break;
+      case "event":
+        await resolveEvent(p, tile);
+        break;
+      case "infect":
+        await resolveInfect(p);
+        break;
+      case "gov":
+        await resolveGov(p);
+        break;
       case "goal":
         p.finished = true;
         logLine("GOAL", `${p.name}: ゴール！`);
@@ -2306,6 +2481,7 @@
       if (players[turn]?.alive && !players[turn]?.finished) return;
     }
   }
+
   function allDone() {
     return players.filter((p) => p.alive && !p.finished).length === 0;
   }
@@ -2324,7 +2500,7 @@
     }
 
     if (p.pos === 149 && !pandemicResolved) {
-      logLine("149", `${p.name}: 149で待機中（全員集合待ち）`);
+      logLine("149", `${p.name}: 149で待機中`);
       await resolvePandemicIfReady();
       renderTokens();
       renderTable();
@@ -2342,6 +2518,10 @@
 
     await moveStepByStep(p, dice);
     await resolveTile(p);
+
+    if (p.pos === 148 && shouldTriggerSocialEval148()) {
+      await resolveSocialEval148();
+    }
 
     if (p.pos === 149) await resolvePandemicIfReady();
 
@@ -2383,13 +2563,16 @@
   }
 
   /* =========================
-     Result display (Podium + deadlist)
+     Result display
   ========================= */
   function showResult() {
     const arr = players.slice();
     arr.sort((a, b) => {
+      const aAliveRank = a.alive ? 1 : 0;
+      const bAliveRank = b.alive ? 1 : 0;
+      if (bAliveRank !== aAliveRank) return bAliveRank - aAliveRank;
       if (b.money !== a.money) return b.money - a.money;
-      return b.cp - a.cp;
+      return (b.finalTG ?? b.cp) - (a.finalTG ?? a.cp);
     });
 
     if (el.pod1) el.pod1.textContent = arr[0] ? `${arr[0].name}` : "-";
@@ -2407,11 +2590,14 @@
     }
 
     if (el.resultWrap) el.resultWrap.style.display = "block";
-    logLine("RESULT", `順位確定: ${arr.map((p, i) => `${i + 1}位:${p.name}(money=${p.money},CP=${p.cp})`).join(" / ")}`);
+    logLine(
+      "RESULT",
+      `順位確定: ${arr.map((p, i) => `${i + 1}位:${p.name}(alive=${p.alive},money=${p.money},TG=${p.finalTG ?? "-"},CP=${p.cp})`).join(" / ")}`
+    );
   }
 
   /* =========================
-     ✅ Result detail + Save
+     Result detail + Save
   ========================= */
   function ensureDetailedResultUI() {
     if (!el.resultWrap) return;
@@ -2436,8 +2622,11 @@
               <th>未治療回数</th>
               <th>最終資金</th>
               <th>累計投資</th>
+              <th>基金貢献</th>
               <th>アイテム獲得</th>
               <th>最終CP</th>
+              <th>148ボーナス</th>
+              <th>最終TG</th>
               <th>最終状態</th>
             </tr>
           </thead>
@@ -2471,6 +2660,7 @@
       ebolaOccurred: !!ebolaTriggered,
       rabiesOccurred: !!rabiesOccurred,
       waveLvFinal: waveLv,
+      socialEvalTriggered: !!socialEvalTriggered,
       medicalCollapseOccurred: !!medicalCollapseActive || (medicalCollapseRemainTurns > 0),
       players: players.map((p) => ({
         name: p.name,
@@ -2482,8 +2672,12 @@
         untreatedCount: p.untreatedCount || 0,
         moneyFinal: p.money,
         personalInvest: p.personalInvest || 0,
+        govFundContribution: p.govFundContribution || 0,
         itemGained: p.itemGained || 0,
         cpFinal: p.cp,
+        socialEvalCategories: p.socialEvalCategories || [],
+        socialEvalBonus: p.socialEvalBonus || 0,
+        finalTG: p.finalTG,
         statusFinal: statusFinalOf(p),
       })),
     };
@@ -2512,6 +2706,7 @@
       `総投資：<b>${Number(entry.investTotal).toLocaleString()}</b> / ` +
       `世界投資Lv：<b>${entry.worldInvestLv}</b> / ` +
       `Wave：<b>${entry.waveLvFinal}</b> / ` +
+      `148社会評価：<b>${entry.socialEvalTriggered ? "実行済み" : "未実行"}</b> / ` +
       `エボラ：<b>${entry.ebolaOccurred ? "発生" : "なし"}</b> / ` +
       `狂犬病：<b>${entry.rabiesOccurred ? "発生" : "なし"}</b>`;
 
@@ -2522,6 +2717,8 @@
         ? p.insuranceHistory.map((h) => `${h.from}→${h.to}@${h.atTile}`).join(", ")
         : "なし";
 
+      const catText = p.socialEvalCategories?.length ? p.socialEvalCategories.join(", ") : "なし";
+
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td><b>${p.name}</b></td>
@@ -2531,8 +2728,11 @@
         <td>${p.untreatedCount}</td>
         <td>${Number(p.moneyFinal).toLocaleString()}</td>
         <td>${Number(p.personalInvest).toLocaleString()}</td>
+        <td>${Number(p.govFundContribution).toLocaleString()}</td>
         <td>${p.itemGained}</td>
         <td><b>${p.cpFinal}</b></td>
+        <td>+${p.socialEvalBonus} (${catText})</td>
+        <td><b>${p.finalTG ?? "-"}</b></td>
         <td>${p.statusFinal}</td>
       `;
       tb.appendChild(tr);
@@ -2672,6 +2872,7 @@
   function hardReset() {
     busy = false;
     pandemicResolved = false;
+    socialEvalTriggered = false;
 
     govFund = CONFIG.GOV_FUND_START;
     investTotal = 0;
@@ -2775,7 +2976,6 @@
       };
     }
 
-    // 画面リサイズでコマ位置がズレるのを防ぐ
     let resizeTimer = null;
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
@@ -2783,15 +2983,12 @@
         renderTokens();
       }, 120);
     });
-
-    // モーダル背景クリックで閉じない（誤操作防止）
   }
 
   /* =========================
      Boot
   ========================= */
   (function boot() {
-    // 初期人数はUIがあればそこを優先
     if (el.playerCount) {
       playerCount = safeClampPlayers(el.playerCount.value);
     } else {
