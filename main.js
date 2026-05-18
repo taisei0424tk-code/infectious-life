@@ -198,18 +198,17 @@
 
     // Wave
     WAVE: {
-      ENABLE: true,
-      LV_MAX: 3,
-      UP_IF_INFECT_HITS_AT_LEAST: 3,
-      DOWN_IF_INFECT_HITS_AT_MOST: 1,
-      INFECT_PLUS_LV1: 1,
-      INFECT_PLUS_LV2: 1,
-      INFECT_PLUS_LV3: 2,
-      WORK_MINUS_LV2: 2000,
-      WORK_MINUS_LV3: 5000,
-      GOV_MINUS_LV3: 10000,
-    },
-
+  ENABLE: true,
+  LV_MAX: 3,
+  UP_IF_INFECT_HITS_AT_LEAST: 2,
+  DOWN_IF_INFECT_HITS_AT_MOST: 0,
+  INFECT_PLUS_LV1: 1,
+  INFECT_PLUS_LV2: 1,
+  INFECT_PLUS_LV3: 2,
+  WORK_MINUS_LV2: 2000,
+  WORK_MINUS_LV3: 4000,
+  GOV_MINUS_LV3: 5000,
+},
     // Medical collapse
     MEDICAL_COLLAPSE: {
       ENABLE: true,
@@ -237,37 +236,54 @@
   /* =========================
      DOM
   ========================= */
-  const el = {
-    btnStart: document.getElementById("btnStart"),
-    btnRoll: document.getElementById("btnRoll"),
-    btnReset: document.getElementById("btnReset"),
-    diceImg: document.getElementById("diceImg"),
-    msgBox: document.getElementById("msgBox"),
-    log: document.getElementById("log"),
-    turnPill: document.getElementById("turnPill"),
-    envPill: document.getElementById("envPill"),
-    roundPill: document.getElementById("roundPill"),
-    ebolaPill: document.getElementById("ebolaPill"),
-    worldLv: document.getElementById("worldLv"),
-    playerTbody: document.getElementById("playerTbody"),
-    tokensLayer: document.getElementById("tokensLayer"),
-    deadRack: document.getElementById("deadRack"),
-    govFund: document.getElementById("govFund"),
-    modalBack: document.getElementById("modalBack"),
-    modalTitle: document.getElementById("modalTitle"),
-    modalBody: document.getElementById("modalBody"),
-    modalFoot: document.getElementById("modalFoot"),
-    resultWrap: document.getElementById("resultWrap"),
-    pod1: document.getElementById("pod1"),
-    pod2: document.getElementById("pod2"),
-    pod3: document.getElementById("pod3"),
-    deadList: document.getElementById("deadList"),
-    boardBox: document.getElementById("boardBox"),
-    gridLayer: document.getElementById("gridLayer"),
-    boardImg: document.getElementById("boardImg"),
-    playerCount: document.getElementById("playerCount"),
-    playerCountPill: document.getElementById("playerCountPill"),
-  };
+const el = {
+  // 既存
+  btnStart: document.getElementById("btnStart"),
+  btnRoll: document.getElementById("btnRoll"),
+  btnReset: document.getElementById("btnReset"),
+  diceImg: document.getElementById("diceImg"),
+  msgBox: document.getElementById("msgBox"),
+  log: document.getElementById("log"),
+  turnPill: document.getElementById("turnPill"),
+  envPill: document.getElementById("envPill"),
+  roundPill: document.getElementById("roundPill"),
+  ebolaPill: document.getElementById("ebolaPill"),
+  worldLv: document.getElementById("worldLv"),
+  playerTbody: document.getElementById("playerTbody"),
+  tokensLayer: document.getElementById("tokensLayer"),
+  deadRack: document.getElementById("deadRack"),
+  govFund: document.getElementById("govFund"),
+  modalBack: document.getElementById("modalBack"),
+  modalTitle: document.getElementById("modalTitle"),
+  modalBody: document.getElementById("modalBody"),
+  modalFoot: document.getElementById("modalFoot"),
+  resultWrap: document.getElementById("resultWrap"),
+  pod1: document.getElementById("pod1"),
+  pod2: document.getElementById("pod2"),
+  pod3: document.getElementById("pod3"),
+  deadList: document.getElementById("deadList"),
+  boardBox: document.getElementById("boardBox"),
+  gridLayer: document.getElementById("gridLayer"),
+  boardImg: document.getElementById("boardImg"),
+  playerCount: document.getElementById("playerCount"),
+  playerCountPill: document.getElementById("playerCountPill"),
+
+  // スタートガイド系（ここに追加する）
+  passportCover: document.getElementById("passport-cover"),
+  startGuideBoard: document.getElementById("game-board"),
+  btnOpenPassport: document.getElementById("btnOpenPassport"),
+  btnBack: document.getElementById("btnBack"), // ←追加
+
+  topIcon: document.getElementById("top-icon"),
+  stampBox: document.getElementById("stamp-box"),
+  nextBtn: document.getElementById("next-btn"),
+  cardA: document.getElementById("cA"),
+  cardB: document.getElementById("cB"),
+  cardC: document.getElementById("cC"),
+  btnVY: document.getElementById("vY"),
+  btnVN: document.getElementById("vN"),
+};
+
 
   function logLine(tag, s) {
     if (!el.log) return;
@@ -354,7 +370,150 @@
       ]);
     });
   }
+function resetStartGuide() {
+  startGuideStep = 1;
+  startGuidePlayerIndex = 0;
 
+  passportSelections = players.map(() => ({
+    insurance: null,
+    vaccine: null,
+  }));
+
+  for (let i = 1; i <= 7; i++) {
+    const page = document.getElementById(`d${i}`);
+    if (page) page.className = i === 1 ? "page-div active-div" : "page-div";
+  }
+
+  if (el.topIcon) el.topIcon.textContent = startGuideIcons[0];
+  if (el.nextBtn) {
+    el.nextBtn.textContent = "つぎへ！";
+    el.nextBtn.className = "main-btn";
+  }
+
+  if (el.stampBox) el.stampBox.className = "";
+
+  if (el.passportCover) {
+    el.passportCover.classList.remove("closed");
+    el.passportCover.style.display = "flex";
+  }
+
+  if (el.startGuideBoard) {
+    el.startGuideBoard.style.display = "none";
+    el.startGuideBoard.setAttribute("aria-hidden", "true");
+  }
+}
+
+function openPassportGuide() {
+  if (el.passportCover) el.passportCover.classList.add("closed");
+
+  setTimeout(() => {
+    if (el.passportCover) el.passportCover.style.display = "none";
+    if (el.startGuideBoard) {
+      el.startGuideBoard.style.display = "block";
+      el.startGuideBoard.setAttribute("aria-hidden", "false");
+    }
+  }, 500);
+}
+
+function backToPassportCover() {
+  if (el.startGuideBoard) {
+    el.startGuideBoard.style.display = "none";
+    el.startGuideBoard.setAttribute("aria-hidden", "true");
+  }
+
+  if (el.passportCover) {
+    el.passportCover.classList.remove("closed");
+    el.passportCover.style.display = "flex";
+  }
+}
+
+function renderPassportSelectionUI() {
+  const sel = passportSelections[startGuidePlayerIndex] || {};
+
+  [el.cardA, el.cardB, el.cardC].forEach((card) => {
+    if (card) card.classList.remove("selected");
+  });
+
+  if (sel.insurance === "A" && el.cardA) el.cardA.classList.add("selected");
+  if (sel.insurance === "B" && el.cardB) el.cardB.classList.add("selected");
+  if (sel.insurance === "C" && el.cardC) el.cardC.classList.add("selected");
+
+  if (el.btnVY) el.btnVY.classList.toggle("selected", sel.vaccine === true);
+  if (el.btnVN) el.btnVN.classList.toggle("selected", sel.vaccine === false);
+}
+
+async function goNextStartGuide() {
+  const sel = passportSelections[startGuidePlayerIndex] || {};
+
+  if (startGuideStep === 5 && !sel.insurance) {
+    alert(`${players[startGuidePlayerIndex].name} の保険を選択してください`);
+    return;
+  }
+
+  if (startGuideStep === 6 && sel.vaccine == null) {
+    alert(`${players[startGuidePlayerIndex].name} のワクチンを選択してください`);
+    return;
+  }
+
+  if (startGuideStep < 7) {
+    const cur = document.getElementById(`d${startGuideStep}`);
+    if (cur) cur.className = "page-div";
+
+    startGuideStep += 1;
+
+    const next = document.getElementById(`d${startGuideStep}`);
+    if (next) next.className = "page-div active-div";
+
+    if (el.topIcon) el.topIcon.textContent = startGuideIcons[startGuideStep - 1];
+
+    if (startGuideStep === 7) {
+      if (el.nextBtn) {
+        const isLast = startGuidePlayerIndex >= players.length - 1;
+        el.nextBtn.textContent = isLast
+          ? "スゴロクを開始する"
+          : `次のプレイヤーへ`;
+      }
+
+      setTimeout(() => {
+        if (el.stampBox) el.stampBox.className = "stamp-anim";
+      }, 350);
+    }
+
+    renderPassportSelectionUI();
+    return;
+  }
+
+  if (startGuidePlayerIndex < players.length - 1) {
+    startGuidePlayerIndex += 1;
+    startGuideStep = 5;
+
+    for (let i = 1; i <= 7; i++) {
+      const page = document.getElementById(`d${i}`);
+      if (page) page.className = i === 5 ? "page-div active-div" : "page-div";
+    }
+
+    if (el.topIcon) el.topIcon.textContent = startGuideIcons[4];
+    if (el.nextBtn) el.nextBtn.textContent = "つぎへ！";
+    if (el.stampBox) el.stampBox.className = "";
+
+    renderPassportSelectionUI();
+
+    alert(`${players[startGuidePlayerIndex].name} の設定をしてください`);
+    return;
+  }
+
+  if (el.startGuideBoard) {
+    el.startGuideBoard.style.display = "none";
+    el.startGuideBoard.setAttribute("aria-hidden", "true");
+  }
+
+  if (el.passportCover) {
+    el.passportCover.style.display = "none";
+    el.passportCover.classList.remove("closed");
+  }
+
+  await startGameCore();
+}
   /* =========================
      Dice image (3x2 sprite)
   ========================= */
@@ -450,13 +609,32 @@
     for (const pos of workTiles) board[pos] = { type: "work", text: "働いた！" };
     for (const pos of itemTiles) board[pos] = { type: "item", text: "アイテム入手" };
 
-    for (const pos of eventTiles) {
-      const negative = rand01() < 0.70;
-      const mag = 5000 + randInt(0, 6) * 2000;
-      const v = negative ? -mag : mag;
-      board[pos] = { type: "event", delta: v, text: v >= 0 ? `臨時収入 +${v}` : `出費 ${v}` };
-    }
+   for (const pos of eventTiles) {
+  const negative = rand01() < 0.25; // 25%でマイナス
 
+  let v;
+  if (negative) {
+    // 全域共通: -4,000 ～ -10,000
+    v = -(4000 + randInt(0, 3) * 2000);
+  } else {
+    if (pos <= 40) {
+      // 序盤: 35投資に間に合わせる
+      v = 15000 + randInt(0, 3) * 5000; // +15,000 ～ +30,000
+    } else if (pos <= 80) {
+      // 中盤: 75投資に間に合わせる
+      v = 12000 + randInt(0, 4) * 4000; // +12,000 ～ +28,000
+    } else {
+      // 後半: 逆転・立て直し用
+      v = 15000 + randInt(0, 4) * 5000; // +15,000 ～ +35,000
+    }
+  }
+
+  board[pos] = {
+    type: "event",
+    delta: v,
+    text: v >= 0 ? `臨時収入 +${v}` : `出費 ${v}`
+  };
+}
     board[149] = { ...SPECIAL_TILES.get(149) };
     board[150] = { ...SPECIAL_TILES.get(150) };
 
@@ -559,14 +737,65 @@
   let infectHitsThisRound = 0;
 
   // Medical collapse / triage
-  let medicalCollapseActive = false;
-  let medicalCollapseRemainTurns = 0;
+let medicalCollapseActive = false;
+let medicalCollapseRemainTurns = 0;
+let medicalCollapseOccurred = false;
+let startGuideStep = 1;
+let startGuidePlayerIndex = 0;
+let passportSelections = [];
 
+const startGuideIcons = ["🏘️", "📋", "⚠️", "🌟", "🛡️", "💉", "🚩"];
   function insuranceText(code) {
     return CONFIG.INSURANCE[code]?.name ?? String(code);
   }
+function selectPassportInsurance(type) {
+  passportSelections[startGuidePlayerIndex].insurance = type;
 
-  function makePlayer(i) {
+  [el.cardA, el.cardB, el.cardC].forEach((card) => {
+    if (card) card.classList.remove("selected");
+  });
+
+  if (type === "A" && el.cardA) el.cardA.classList.add("selected");
+  if (type === "B" && el.cardB) el.cardB.classList.add("selected");
+  if (type === "C" && el.cardC) el.cardC.classList.add("selected");
+}
+
+function selectPassportVaccine(flag) {
+  passportSelections[startGuidePlayerIndex].vaccine = flag;
+
+  if (el.btnVY) el.btnVY.classList.toggle("selected", flag === true);
+  if (el.btnVN) el.btnVN.classList.toggle("selected", flag === false);
+}
+
+function applyPassportSelections() {
+  for (const p of players) {
+    const sel = passportSelections[p.id] || {};
+    const insurance = sel.insurance || "B";
+    const vaccine = sel.vaccine === true;
+
+    p.insurance = insurance;
+    p.insuranceInit = insurance;
+
+    if (vaccine && p.money >= CONFIG.VACCINE_PACK.cost) {
+      p.money -= CONFIG.VACCINE_PACK.cost;
+      p.vaccinated = true;
+      p.vaccinatedSet = new Set(CONFIG.VACCINE_PACK.protects);
+      p.vaccinatedInit = true;
+      logLine("VAX", `${p.name}: 接種（-${CONFIG.VACCINE_PACK.cost.toLocaleString()}）`);
+    } else {
+      p.vaccinated = false;
+      p.vaccinatedSet = new Set();
+      p.vaccinatedInit = false;
+      logLine("VAX", `${p.name}: 接種しない`);
+    }
+
+    logLine("INIT", `${p.name}: 初期保険=${insuranceText(p.insurance)}（パスポート選択）`);
+  }
+
+  renderTable();
+}
+
+function makePlayer(i) {
     return {
       id: i,
       name: `P${i + 1}`,
@@ -683,55 +912,57 @@
     return p.alive ? "生存" : "死亡";
   }
 
-  function renderTable() {
-    if (!el.playerTbody) return;
-    el.playerTbody.innerHTML = "";
-    for (const p of players) {
-      const env = envOf(p.pos);
-      const collapseTag = collapseActive ? `<span class="tag p">逼迫</span>` : "";
-      const vaxTag = p.vaccinated ? `<span class="tag">💉済</span>` : "";
-      const ghostTag = !p.alive && p.ghost ? `<span class="tag">👻</span>` : "";
-      const deadMark = p.alive ? "" : " 💀";
-      const waveTag = CONFIG.WAVE.ENABLE ? `<span class="tag t">WaveLv${waveLv}</span>` : "";
-      const medTag = medicalCollapseActive ? `<span class="tag p">医療崩壊${medicalCollapseRemainTurns}</span>` : "";
+ function renderTable() {
+  if (!el.playerTbody) return;
+  el.playerTbody.innerHTML = "";
 
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><b>${p.name}</b> ${ghostTag}${deadMark}<div class="small">${insuranceText(p.insurance)}</div></td>
-        <td>${p.pos}</td>
-        <td>${p.money.toLocaleString()} ${CONFIG.MONEY_UNIT}</td>
-        <td>${p.untreated}</td>
-        <td>${itemsToText(p.items)} ${collapseTag}</td>
-        <td>${(p.personalInvest || 0).toLocaleString()}</td>
-        <td>${envTag(env)} ${vaxTag} ${waveTag} ${medTag}</td>
-        <td><b>${p.cp}</b></td>
-        <td>${statusText(p)}</td>
-      `;
-      el.playerTbody.appendChild(tr);
-    }
+  for (const p of players) {
+    const env = envOf(p.pos);
+    const collapseTag = collapseActive ? `<span class="tag p">逼迫</span>` : "";
+    const vaxTag = p.vaccinated ? `<span class="tag">💉済</span>` : "";
+    const ghostTag = !p.alive && p.ghost ? `<span class="tag">👻</span>` : "";
+    const deadMark = p.alive ? "" : " 💀";
+    const waveTag = CONFIG.WAVE.ENABLE ? `<span class="tag t">WaveLv${waveLv}</span>` : "";
+    const medTag = medicalCollapseActive ? `<span class="tag p">医療崩壊${medicalCollapseRemainTurns}</span>` : "";
 
-    if (el.govFund) el.govFund.textContent = govFund.toLocaleString();
-    if (el.worldLv) el.worldLv.textContent = String(currentInvestLv());
-    if (el.ebolaPill) el.ebolaPill.textContent = ebolaTriggered ? `継続${ebolaRemainTurns}` : "なし";
-    if (el.roundPill) el.roundPill.textContent = `Round: ${roundCounter}`;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><b>${p.name}</b> ${ghostTag}${deadMark}</td>
+      <td>${p.pos}</td>
+      <td>${p.money.toLocaleString()} ${CONFIG.MONEY_UNIT}</td>
+      <td>${insuranceText(p.insurance)}</td>
+      <td>${p.untreated}</td>
+      <td>${itemsToText(p.items)} ${collapseTag}</td>
+      <td>${(p.personalInvest || 0).toLocaleString()}</td>
+      <td>${envTag(env)} ${vaxTag} ${waveTag} ${medTag}</td>
+      <td><b>${p.cp}</b></td>
+      <td>${statusText(p)}</td>
+    `;
+    el.playerTbody.appendChild(tr);
   }
 
-  function renderTurn() {
-    const p = players[turn];
-    if (el.turnPill) el.turnPill.textContent = `Turn: ${p ? p.name : "-"}`;
-    if (el.envPill) el.envPill.textContent = `Env: ${p ? envOf(p.pos) : "-"}`;
-    if (el.worldLv) el.worldLv.textContent = String(currentInvestLv());
-    if (el.ebolaPill) el.ebolaPill.textContent = ebolaTriggered ? `継続${ebolaRemainTurns}` : "なし";
-    if (el.roundPill) el.roundPill.textContent = `Round: ${roundCounter}`;
-  }
+  if (el.govFund) el.govFund.textContent = govFund.toLocaleString();
+  if (el.worldLv) el.worldLv.textContent = String(currentInvestLv());
+  if (el.ebolaPill) el.ebolaPill.textContent = ebolaTriggered ? `継続${ebolaRemainTurns}` : "なし";
+  if (el.roundPill) el.roundPill.textContent = `Round: ${roundCounter}`;
+}
 
-  function syncPlayerCountUI() {
-    if (el.playerCount) {
-      el.playerCount.value = String(playerCount);
-      el.playerCount.disabled = gameStarted;
-    }
-    if (el.playerCountPill) el.playerCountPill.textContent = `Players: ${playerCount}`;
+function renderTurn() {
+  const p = players[turn];
+  if (el.turnPill) el.turnPill.textContent = `Turn: ${p ? p.name : "-"}`;
+  if (el.envPill) el.envPill.textContent = `Env: ${p ? envOf(p.pos) : "-"}`;
+  if (el.worldLv) el.worldLv.textContent = String(currentInvestLv());
+  if (el.ebolaPill) el.ebolaPill.textContent = ebolaTriggered ? `継続${ebolaRemainTurns}` : "なし";
+  if (el.roundPill) el.roundPill.textContent = `Round: ${roundCounter}`;
+}
+
+function syncPlayerCountUI() {
+  if (el.playerCount) {
+    el.playerCount.value = String(playerCount);
+    el.playerCount.disabled = gameStarted;
   }
+  if (el.playerCountPill) el.playerCountPill.textContent = `Players: ${playerCount}`;
+}
 
   /* =========================
      Movement with STOP tiles
@@ -979,8 +1210,9 @@
       return false;
     }
 
-    medicalCollapseActive = true;
-    medicalCollapseRemainTurns = randInt(CONFIG.MEDICAL_COLLAPSE.DURATION_MIN, CONFIG.MEDICAL_COLLAPSE.DURATION_MAX);
+medicalCollapseActive = true;
+medicalCollapseOccurred = true;
+medicalCollapseRemainTurns = randInt(CONFIG.MEDICAL_COLLAPSE.DURATION_MIN, CONFIG.MEDICAL_COLLAPSE.DURATION_MAX);
 
     logLine("MED", `医療崩壊 発生：${medicalCollapseRemainTurns}ラウンド（未治療合計=${total}）`);
 
@@ -1287,15 +1519,23 @@
       .filter(Boolean);
   }
 
-  function itemSuccessRate(it) {
-    const lv = currentInvestLv();
-    const plus = lv >= 2 ? CONFIG.INVEST_EFFECTS.itemSuccessPlusAtLv2 : 0;
-    let rate = Math.max(0, Math.min(100, (it.base ?? 0) + plus));
-    if (collapseActive) {
-      rate = Math.max(CONFIG.COLLAPSE.ITEM_SUCCESS_MIN, rate - CONFIG.COLLAPSE.ITEM_SUCCESS_MINUS);
-    }
-    return rate;
+ function itemSuccessRate(it) {
+  const lv = currentInvestLv();
+  const plus = lv >= 2 ? CONFIG.INVEST_EFFECTS.itemSuccessPlusAtLv2 : 0;
+
+  let rate = Math.max(0, Math.min(100, (it.base ?? 0) + plus));
+
+  // ▼ Wave補正（カジュアル版）
+  const wavePenalty = Math.max(0, Math.min((waveLv - 1) * 2, 10));
+  rate -= wavePenalty;
+
+  // ▼ 医療逼迫
+  if (collapseActive) {
+    rate = Math.max(CONFIG.COLLAPSE.ITEM_SUCCESS_MIN, rate - CONFIG.COLLAPSE.ITEM_SUCCESS_MINUS);
   }
+
+  return rate;
+}
 
   async function chooseAndUseItem(p, usableList) {
     if (!usableList.length) return { used: false, success: false, item: null, rate: 0 };
@@ -1400,143 +1640,180 @@
     return Math.max(CONFIG.SEV_MIN, baseSev - CONFIG.INVEST_EFFECTS.infectDangerMinusAtLv1);
   }
 
-  async function resolveInfect(p) {
-    if (p.alive && (p.infectShield115 || 0) > 0) {
-      p.infectShield115 = Math.max(0, (p.infectShield115 || 0) - 1);
-      logLine("115", `${p.name}: 115の医療現場優先で infect を1回無効化`);
-      await showOkPopup("115効果：感染無効", [`${p.name} は「次のinfect無効化」を消費して感染を回避した！`], "infect", "blue");
-      return;
-    }
-
-    const env = envOf(p.pos);
-    const d = drawDiseaseForEnv(env);
-    const disease = d.疾病候補;
-    const color = normalizeColor(d.分類);
-
-    const baseSev = severityOfClass(d.分類);
-
-    let sev = baseSev;
-    sev = applyInvestDangerMinus(sev);
-    sev = applyEbolaInfectPlus(sev);
-    sev = applyWaveInfectPlus(sev);
-    sev = applyDeadInfectPlus(sev);
-
-    if (sev >= 2) highSevInfectStreak += 1;
-    else highSevInfectStreak = 0;
-
-    const vaxActive = true;
-    if (vaxActive && p.vaccinated && p.vaccinatedSet.has(disease)) {
-      logLine("VAX", `${p.name}: ワクチンで ${disease} を防いだ`);
-      await showOkPopup("ワクチンで防いだ", [d.内容, `対象：<b>${disease}</b> → 100%回避`], "infect", "blue");
-      return;
-    }
-
-    const usable = usableItemsForDisease(p, d);
-    const useRes = await chooseAndUseItem(p, usable);
-    if (useRes.used && useRes.success) {
-      await showOkPopup("ギリ回避！", [d.内容, `アイテム <b>${useRes.item.name}</b>（成功率${useRes.rate}%）で回避！`], "infect", "blue");
-      renderTable();
-      return;
-    }
-
-    p.infectLanded = (p.infectLanded || 0) + 1;
-    infectHitsThisRound += 1;
-
-    if (disease === "狂犬病") rabiesOccurred = true;
-
-    logLine("INFECT", `${p.name}: 感染【${disease}】危険度${sev}（base${baseSev} / WaveLv${waveLv}）`);
-    logLine("INFECT", `  ${d.内容}`);
-
+ async function resolveInfect(p) {
+  if (p.alive && (p.infectShield115 || 0) > 0) {
+    p.infectShield115 = Math.max(0, (p.infectShield115 || 0) - 1);
+    logLine("115", `${p.name}: 115の医療現場優先で infect を1回無効化`);
     await showOkPopup(
-      `${disease} 発生`,
-      [
-        d.内容,
-        `<b>危険度：</b>${sev}（未治療合計${CONFIG.UNTREATED_DEATH_THRESHOLD}で死亡）`,
-        `Wave：Lv${waveLv}（感染波で危険度上昇の可能性）`,
-        deadGhostCount() > 0 ? `👻 死者の影響：危険度 +${CONFIG.GHOST.DEAD_INFECT_PLUS}` : "（死者の影響なし）",
-        collapseActive ? `⚠️ 医療逼迫：アイテム成功率が低下中（-20%）` : `アイテム：運が良ければ防げる（今は${useRes.used ? "使ったが失敗" : "未使用/不可"}）`,
-        medicalCollapseActive ? `🏥 医療崩壊中：治療に追加自己負担 +${CONFIG.MEDICAL_COLLAPSE.EXTRA_TREAT_PLAYER_PAY.toLocaleString()}` : "医療崩壊：なし",
-        `ワクチン：対象なら100%防ぐ（145でも有効）`,
-      ],
+      "115効果：感染無効",
+      [`${p.name} は「次のinfect無効化」を消費して感染を回避した！`],
       "infect",
-      color
+      "blue"
     );
-
-    await new Promise((resolve) => {
-      const ins = CONFIG.INSURANCE[p.insurance];
-      const extra = medicalCollapseActive ? CONFIG.MEDICAL_COLLAPSE.EXTRA_TREAT_PLAYER_PAY : 0;
-      const pay = ins.treatPlayerPay + extra;
-
-      showModal(
-        "治療する？",
-        `<div class="popMsg">
-          <div class="popTitle">🧪 治療の選択</div>
-          <div class="popLine"><b>病気：</b>${disease}</div>
-          <div class="popLine"><b>危険度：</b>${sev}（未治療合計${CONFIG.UNTREATED_DEATH_THRESHOLD}で死亡）</div>
-          <div class="popLine"><b>保険：</b>${insuranceText(p.insurance)}</div>
-          ${medicalCollapseActive ? `<div class="popLine"><b>医療崩壊：</b>追加自己負担 +${extra.toLocaleString()}</div>` : ""}
-          <hr class="popHr"/>
-          <div class="popLine">自己負担：<b>${pay.toLocaleString()}</b></div>
-          <div class="popLine">政府負担：<b>${ins.treatGovPay.toLocaleString()}</b></div>
-          <div class="small">治療CP：A +1 / B 0 / C -1</div>
-        </div>`,
-        [
-          {
-            text: "治療する",
-            className: "btnPrimary",
-            onClick: async () => {
-              closeModal();
-              const ok = await doTreatment(p);
-              if (!ok) {
-                p.untreated += sev;
-                p.untreatedCount = (p.untreatedCount || 0) + 1;
-                logLine("UNTREAT", `${p.name}: 未治療 +${sev}（合計 ${p.untreated}）`);
-              } else {
-                logLine("TREAT", `${p.name}: 治療済み（未治療増加なし）`);
-              }
-              resolve();
-            },
-          },
-          {
-            text: "治療しない",
-            className: "btnDanger",
-            onClick: () => {
-              closeModal();
-              p.untreated += sev;
-              p.untreatedCount = (p.untreatedCount || 0) + 1;
-              addCP(p, CONFIG.REFUSE_TREAT_CP, "（治療拒否）");
-              logLine("UNTREAT", `${p.name}: 未治療 +${sev}（合計 ${p.untreated}）`);
-              resolve();
-            },
-          },
-        ]
-      );
-    });
-
-    if (p.untreated >= CONFIG.UNTREATED_DEATH_THRESHOLD) {
-      p.alive = false;
-      p.diedMidgame = true;
-
-      if (CONFIG.GHOST.ENABLE) {
-        p.ghost = true;
-        p.moneyFrozen = true;
-      }
-
-      logLine("DEAD", `${p.name}: 未治療 ${p.untreated} で死亡（ghost=${p.ghost ? "ON" : "OFF"}）`);
-      await showOkPopup(
-        "アウト…（幽霊モード）",
-        [
-          `${p.name} は未治療が積み重なって倒れた…`,
-          "ただし盤上には残る（サイコロ不可 / money凍結）",
-          "以後：147（情報錯綜）で政治介入できる",
-          `死者がいる間：infect危険度 +${CONFIG.GHOST.DEAD_INFECT_PLUS}（上限${CONFIG.SEV_MAX}）`,
-        ],
-        "infect",
-        "red"
-      );
-    }
+    return;
   }
 
+  const env = envOf(p.pos);
+  const d = drawDiseaseForEnv(env);
+  const disease = d.疾病候補;
+  const color = normalizeColor(d.分類);
+
+  const baseSev = severityOfClass(d.分類);
+
+  let sev = baseSev;
+  sev = applyInvestDangerMinus(sev);
+  sev = applyEbolaInfectPlus(sev);
+  sev = applyWaveInfectPlus(sev);
+  sev = applyDeadInfectPlus(sev);
+
+  // ★ infectマスに止まった回数として先に数える
+  p.infectLanded = (p.infectLanded || 0) + 1;
+
+  if (sev >= 2) highSevInfectStreak += 1;
+  else highSevInfectStreak = 0;
+
+  // ワクチンで防げるならカウントを戻して終了
+  if (p.vaccinated && p.vaccinatedSet.has(disease)) {
+    p.infectLanded = Math.max(0, (p.infectLanded || 0) - 1);
+
+    logLine("VAX", `${p.name}: ワクチンで ${disease} を防いだ`);
+    await showOkPopup(
+      "ワクチンで防いだ",
+      [d.内容, `対象：<b>${disease}</b> → 100%回避`, "Wave変化なし"],
+      "infect",
+      "blue"
+    );
+    return;
+  }
+
+  // アイテム判定
+  const usable = usableItemsForDisease(p, d);
+  const useRes = await chooseAndUseItem(p, usable);
+
+  if (useRes.used && useRes.success) {
+    logLine("INFECT", `${p.name}: ${disease} をアイテムで防御成功（Wave変化なし）`);
+    await showOkPopup(
+      "ギリ回避！",
+      [
+        d.内容,
+        `アイテム <b>${useRes.item.name}</b>（成功率${useRes.rate}%）で回避！`,
+        "Wave変化なし",
+      ],
+      "infect",
+      "blue"
+    );
+    renderTable();
+    return;
+  }
+
+  // =========================
+  // ここで「感染成立」
+  // =========================
+  infectHitsThisRound += 1;
+
+  if (disease === "狂犬病") rabiesOccurred = true;
+
+  logLine(
+    "INFECT",
+    `${p.name}: 感染成立【${disease}】危険度${sev}（base${baseSev} / WaveLv${waveLv} / round感染成立=${infectHitsThisRound}）`
+  );
+  logLine("INFECT", `  ${d.内容}`);
+
+  await showOkPopup(
+    `${disease} 発生`,
+    [
+      d.内容,
+      `<b>危険度：</b>${sev}（未治療合計${CONFIG.UNTREATED_DEATH_THRESHOLD}で死亡）`,
+      `Wave：Lv${waveLv}`,
+      `このラウンドの感染成立数：<b>${infectHitsThisRound}</b>`,
+      deadGhostCount() > 0
+        ? `👻 死者の影響：危険度 +${CONFIG.GHOST.DEAD_INFECT_PLUS}`
+        : "（死者の影響なし）",
+      collapseActive
+        ? `⚠️ 医療逼迫：アイテム成功率が低下中（-20%）`
+        : `アイテム：${useRes.used ? "使ったが失敗" : "未使用/不可"}`,
+      medicalCollapseActive
+        ? `🏥 医療崩壊中：治療に追加自己負担 +${CONFIG.MEDICAL_COLLAPSE.EXTRA_TREAT_PLAYER_PAY.toLocaleString()}`
+        : "医療崩壊：なし",
+    ],
+    "infect",
+    color
+  );
+
+  await new Promise((resolve) => {
+    const ins = CONFIG.INSURANCE[p.insurance];
+    const extra = medicalCollapseActive ? CONFIG.MEDICAL_COLLAPSE.EXTRA_TREAT_PLAYER_PAY : 0;
+    const pay = ins.treatPlayerPay + extra;
+
+    showModal(
+      "治療する？",
+      `<div class="popMsg">
+        <div class="popTitle">🧪 治療の選択</div>
+        <div class="popLine"><b>病気：</b>${disease}</div>
+        <div class="popLine"><b>危険度：</b>${sev}（未治療合計${CONFIG.UNTREATED_DEATH_THRESHOLD}で死亡）</div>
+        <div class="popLine"><b>保険：</b>${insuranceText(p.insurance)}</div>
+        ${medicalCollapseActive ? `<div class="popLine"><b>医療崩壊：</b>追加自己負担 +${extra.toLocaleString()}</div>` : ""}
+        <hr class="popHr"/>
+        <div class="popLine">自己負担：<b>${pay.toLocaleString()}</b></div>
+        <div class="popLine">政府負担：<b>${ins.treatGovPay.toLocaleString()}</b></div>
+        <div class="small">治療CP：A +1 / B 0 / C -1</div>
+      </div>`,
+      [
+        {
+          text: "治療する",
+          className: "btnPrimary",
+          onClick: async () => {
+            closeModal();
+            const ok = await doTreatment(p);
+            if (!ok) {
+              p.untreated += sev;
+              p.untreatedCount = (p.untreatedCount || 0) + 1;
+              logLine("UNTREAT", `${p.name}: 所持金不足で未治療 +${sev}（合計 ${p.untreated}）`);
+            } else {
+              logLine("TREAT", `${p.name}: 治療済み（未治療増加なし）`);
+            }
+            resolve();
+          },
+        },
+        {
+          text: "治療しない",
+          className: "btnDanger",
+          onClick: () => {
+            closeModal();
+            p.untreated += sev;
+            p.untreatedCount = (p.untreatedCount || 0) + 1;
+            addCP(p, CONFIG.REFUSE_TREAT_CP, "（治療拒否）");
+            logLine("UNTREAT", `${p.name}: 未治療 +${sev}（合計 ${p.untreated}）`);
+            resolve();
+          },
+        },
+      ]
+    );
+  });
+
+  if (p.untreated >= CONFIG.UNTREATED_DEATH_THRESHOLD) {
+    p.alive = false;
+    p.diedMidgame = true;
+
+    if (CONFIG.GHOST.ENABLE) {
+      p.ghost = true;
+      p.moneyFrozen = true;
+    }
+
+    logLine("DEAD", `${p.name}: 未治療 ${p.untreated} で死亡（ghost=${p.ghost ? "ON" : "OFF"}）`);
+    await showOkPopup(
+      "アウト…（幽霊モード）",
+      [
+        `${p.name} は未治療が積み重なって倒れた…`,
+        "ただし盤上には残る（サイコロ不可 / money凍結）",
+        "以後：147（情報錯綜）で政治介入できる",
+        `死者がいる間：infect危険度 +${CONFIG.GHOST.DEAD_INFECT_PLUS}（上限${CONFIG.SEV_MAX}）`,
+      ],
+      "infect",
+      "red"
+    );
+  }
+}
   /* =========================
      GOV resolve (35/75 insurance + invest, 115 special)
   ========================= */
@@ -2529,27 +2806,26 @@
     renderTable();
     renderTurn();
 
-    const prevTurn = turn;
-    nextLivingTurn();
+ const prevTurn = turn;
+nextLivingTurn();
 
-    if ((prevTurn + 1) % playerCount === 0) {
-      roundCounter += 1;
+if (turn <= prevTurn) {
+  roundCounter += 1;
 
-      const medTriggeredNow = await maybeTriggerMedicalCollapseAtRoundEnd();
-      await maybeTriageAtRoundEnd();
+  const medTriggeredNow = await maybeTriggerMedicalCollapseAtRoundEnd();
+  await maybeTriageAtRoundEnd();
 
-      const ebolaTriggeredNow = await maybeTriggerEbolaAtRoundEnd();
-      if (!ebolaTriggeredNow) {
-        await tickEbolaAtRoundEnd();
-      }
+  const ebolaTriggeredNow = await maybeTriggerEbolaAtRoundEnd();
+  if (!ebolaTriggeredNow) {
+    await tickEbolaAtRoundEnd();
+  }
 
-      if (!medTriggeredNow) {
-        await tickMedicalCollapseAtRoundEnd();
-      }
+  if (!medTriggeredNow) {
+    await tickMedicalCollapseAtRoundEnd();
+  }
 
-      await waveTickAtRoundEnd();
-    }
-
+  await waveTickAtRoundEnd();
+}
     renderTurn();
 
     if (allDone() && pandemicResolved) {
@@ -2648,40 +2924,63 @@
     return p.alive ? "生存" : "死亡";
   }
 
-  function buildResultEntry() {
-    const now = new Date();
-    return {
-      id: now.toISOString(),
-      playedAt: now.toLocaleString("ja-JP"),
-      playerCount,
-      govFundFinal: govFund,
-      investTotal,
-      worldInvestLv: currentInvestLv(),
-      ebolaOccurred: !!ebolaTriggered,
-      rabiesOccurred: !!rabiesOccurred,
-      waveLvFinal: waveLv,
-      socialEvalTriggered: !!socialEvalTriggered,
-      medicalCollapseOccurred: !!medicalCollapseActive || (medicalCollapseRemainTurns > 0),
-      players: players.map((p) => ({
-        name: p.name,
-        insuranceInit: p.insuranceInit,
-        insuranceFinal: p.insurance,
-        insuranceHistory: p.insuranceHistory || [],
-        vaccinatedInit: !!p.vaccinatedInit,
-        infectLanded: p.infectLanded || 0,
-        untreatedCount: p.untreatedCount || 0,
-        moneyFinal: p.money,
-        personalInvest: p.personalInvest || 0,
-        govFundContribution: p.govFundContribution || 0,
-        itemGained: p.itemGained || 0,
-        cpFinal: p.cp,
-        socialEvalCategories: p.socialEvalCategories || [],
-        socialEvalBonus: p.socialEvalBonus || 0,
-        finalTG: p.finalTG,
-        statusFinal: statusFinalOf(p),
-      })),
-    };
-  }
+function buildResultEntry() {
+  const now = new Date();
+
+  return {
+    id: now.toISOString(),
+    playedAt: now.toLocaleString("ja-JP"),
+
+    // 全体情報
+    playerCount,
+    govFundFinal: govFund,
+    investTotal,
+    worldInvestLv: currentInvestLv(),
+
+    ebolaOccurred: !!ebolaTriggered,
+    rabiesOccurred: !!rabiesOccurred,
+    waveLvFinal: waveLv,
+
+    socialEvalTriggered: !!socialEvalTriggered,
+
+    // ★ここが修正ポイント
+    medicalCollapseOccurred: !!medicalCollapseOccurred,
+
+    // プレイヤーごとの詳細
+    players: players.map((p) => ({
+      name: p.name,
+
+      // 保険
+      insuranceInit: p.insuranceInit,
+      insuranceFinal: p.insurance,
+      insuranceHistory: p.insuranceHistory || [],
+
+      // ワクチン
+      vaccinatedInit: !!p.vaccinatedInit,
+
+      // 行動ログ
+      infectLanded: p.infectLanded || 0,
+      untreatedCount: p.untreatedCount || 0,
+
+      // 経済
+      moneyFinal: p.money,
+      personalInvest: p.personalInvest || 0,
+      govFundContribution: p.govFundContribution || 0,
+
+      // その他
+      itemGained: p.itemGained || 0,
+      cpFinal: p.cp,
+
+      // 148社会評価
+      socialEvalCategories: p.socialEvalCategories || [],
+      socialEvalBonus: p.socialEvalBonus || 0,
+
+      // 最終結果
+      finalTG: p.finalTG,
+      statusFinal: statusFinalOf(p),
+    })),
+  };
+}
 
   function saveEntry(entry) {
     const key = "IL150_HISTORY";
@@ -2870,89 +3169,93 @@
      Reset / start / player count
   ========================= */
   function hardReset() {
-    busy = false;
-    pandemicResolved = false;
-    socialEvalTriggered = false;
+  busy = false;
+  pandemicResolved = false;
+  socialEvalTriggered = false;
 
-    govFund = CONFIG.GOV_FUND_START;
-    investTotal = 0;
-    investedAt35 = new Set();
-    investedAt75 = new Set();
+  govFund = CONFIG.GOV_FUND_START;
+  investTotal = 0;
+  investedAt35 = new Set();
+  investedAt75 = new Set();
 
-    collapseActive = false;
+  collapseActive = false;
 
-    finalPhaseStarted = false;
-    rankSnapshotAt143 = null;
+  finalPhaseStarted = false;
+  rankSnapshotAt143 = null;
 
-    ebolaTriggered = false;
-    ebolaRemainTurns = 0;
-    highSevInfectStreak = 0;
-    roundCounter = 0;
+  ebolaTriggered = false;
+  ebolaRemainTurns = 0;
+  highSevInfectStreak = 0;
+  roundCounter = 0;
 
-    rabiesOccurred = false;
+  rabiesOccurred = false;
 
-    event115Activated = false;
-    event115ChoicesDone = new Set();
+  event115Activated = false;
+  event115ChoicesDone = new Set();
 
-    waveLv = 0;
-    infectHitsThisRound = 0;
+  waveLv = 0;
+  infectHitsThisRound = 0;
 
-    medicalCollapseActive = false;
-    medicalCollapseRemainTurns = 0;
+  // ★ここが今回の完成ポイント
+  medicalCollapseActive = false;
+  medicalCollapseRemainTurns = 0;
+  medicalCollapseOccurred = false;
 
-    turn = 0;
-    gameStarted = false;
+  turn = 0;
+  gameStarted = false;
 
-    if (el.boardImg) el.boardImg.src = CONFIG.BOARD_IMG;
+  if (el.boardImg) el.boardImg.src = CONFIG.BOARD_IMG;
 
-    pool = buildPools();
+  pool = buildPools();
 
-    players = [];
-    for (let i = 0; i < playerCount; i++) players.push(makePlayer(i));
+  players = [];
+  for (let i = 0; i < playerCount; i++) players.push(makePlayer(i));
 
-    buildBoard();
-    buildGridOverlay();
-    rebuildTokens();
+  buildBoard();
+  buildGridOverlay();
+  rebuildTokens();
 
-    renderTokens();
-    renderTable();
-    renderTurn();
+  renderTokens();
+  renderTable();
+  renderTurn();
 
-    if (el.resultWrap) el.resultWrap.style.display = "none";
-    if (el.log) el.log.textContent = "";
-    setMsg("「ゲーム開始」でスタート");
-    setDiceFace(1);
-    closeModal();
+  if (el.resultWrap) el.resultWrap.style.display = "none";
+  if (el.log) el.log.textContent = "";
+  setMsg("「ゲーム開始」でスタート");
+  setDiceFace(1);
+  closeModal();
 
-    if (el.btnRoll) el.btnRoll.disabled = true;
-    if (el.btnStart) el.btnStart.disabled = false;
+  if (el.btnRoll) el.btnRoll.disabled = true;
+  if (el.btnStart) el.btnStart.disabled = false;
 
-    syncPlayerCountUI();
-  }
+  syncPlayerCountUI();
+}
 
-  async function startGame() {
-    if (busy) return;
-    busy = true;
+async function startGame() {
+  if (busy) return;
+  resetStartGuide();
+}
+async function startGameCore() {
+  if (busy) return;
+  busy = true;
 
-    if (el.btnStart) el.btnStart.disabled = true;
-    if (el.btnReset) el.btnReset.disabled = false;
+  if (el.btnStart) el.btnStart.disabled = true;
+  if (el.btnReset) el.btnReset.disabled = false;
 
-    gameStarted = true;
-    syncPlayerCountUI();
+  gameStarted = true;
+  syncPlayerCountUI();
 
-    await askInitialInsurancePerPlayer();
-    await askVaccinePack();
+  applyPassportSelections();
 
-    setMsg("サイコロを振って開始！");
-    if (el.btnRoll) el.btnRoll.disabled = false;
+  setMsg("サイコロを振って開始！");
+  if (el.btnRoll) el.btnRoll.disabled = false;
 
-    renderTokens();
-    renderTable();
-    renderTurn();
+  renderTokens();
+  renderTable();
+  renderTurn();
 
-    busy = false;
-  }
-
+  busy = false;
+}
   function safeClampPlayers(n) {
     const x = Number(n);
     if (!Number.isFinite(x)) return 4;
@@ -2962,29 +3265,41 @@
   /* =========================
      Wire events
   ========================= */
-  function bindUI() {
-    if (el.btnStart) el.btnStart.onclick = () => startGame();
-    if (el.btnRoll) el.btnRoll.onclick = () => doTurn();
-    if (el.btnReset) el.btnReset.onclick = () => hardReset();
+function bindUI() {
+  if (el.btnStart) el.btnStart.onclick = () => startGame();
+  if (el.btnRoll) el.btnRoll.onclick = () => doTurn();
+  if (el.btnReset) el.btnReset.onclick = () => hardReset();
 
-    if (el.playerCount) {
-      el.playerCount.onchange = () => {
-        if (gameStarted) return;
-        playerCount = safeClampPlayers(el.playerCount.value);
-        syncPlayerCountUI();
-        hardReset();
-      };
-    }
+  if (el.btnOpenPassport) el.btnOpenPassport.onclick = () => openPassportGuide();
+  if (el.btnBack) el.btnBack.onclick = () => backToPassportCover();
+  if (el.nextBtn) el.nextBtn.onclick = () => goNextStartGuide();
 
-    let resizeTimer = null;
-    window.addEventListener("resize", () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => {
-        renderTokens();
-      }, 120);
-    });
+  if (el.playerCount) {
+    el.playerCount.onchange = () => {
+      if (gameStarted) return;
+
+      playerCount = safeClampPlayers(el.playerCount.value);
+
+      syncPlayerCountUI();
+      hardReset();
+    };
   }
 
+  if (el.cardA) el.cardA.onclick = () => selectPassportInsurance("A");
+  if (el.cardB) el.cardB.onclick = () => selectPassportInsurance("B");
+  if (el.cardC) el.cardC.onclick = () => selectPassportInsurance("C");
+
+  if (el.btnVY) el.btnVY.onclick = () => selectPassportVaccine(true);
+  if (el.btnVN) el.btnVN.onclick = () => selectPassportVaccine(false);
+
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      renderTokens();
+    }, 120);
+  });
+}
   /* =========================
      Boot
   ========================= */
